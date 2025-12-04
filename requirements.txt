@@ -10,3 +10,4 @@ passlib[bcrypt]
 sqlalchemy
 psycopg2-binary
 werkzeug
+mysql-connector-python
