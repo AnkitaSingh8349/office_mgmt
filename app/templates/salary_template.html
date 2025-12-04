@@ -1,0 +1,106 @@
+{# templates/salary_templates.html - defensive employee salary listing #}
+{% extends "go_admin.html" %}
+{% block content %}
+
+<section class="container py-4">
+
+  <!-- HEADER -->
+  <header class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">💼 My Salaries</h3>
+    <small class="text-muted">View and download your salary slips</small>
+  </header>
+
+  <!-- SALARY TABLE -->
+  <div class="card shadow-sm">
+    <div class="card-body">
+
+      <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+          <thead class="table-dark">
+            <tr class="text-center">
+              <th>ID</th>
+              <th>Month</th>
+              <th>Base</th>
+              <th>Deductions</th>
+              <th>Net</th>
+              <th>Slip</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {# viewer_id: safe user id (None if user not passed) #}
+            {% set viewer_id = None %}
+            {% if user is defined %}
+              {% if user.id is defined %}
+                {% set viewer_id = user.id %}
+              {% elif user.get is defined %}
+                {# if user is dict-like #}
+                {% set viewer_id = user.get('id') %}
+              {% endif %}
+            {% endif %}
+
+            {# If admin (role contains 'admin'), show all (but be careful: usually admin has different template) #}
+            {% set is_admin = False %}
+            {% if user is defined and user.role is defined %}
+              {% set _r = user.role %}
+              {% if _r is string and _r|lower().find('admin') != -1 %}
+                {% set is_admin = True %}
+              {% endif %}
+            {% endif %}
+
+            {% if not salaries %}
+              <tr>
+                <td colspan="6" class="text-center text-muted py-3">
+                  No salary records found.
+                </td>
+              </tr>
+
+            {% else %}
+              {% set visible_count = 0 %}
+
+              {% for s in salaries %}
+                {# If admin, show all. Otherwise only show slips that belong to viewer_id #}
+                {% if is_admin or (viewer_id is not none and s.employee_id == viewer_id) %}
+                  {% set visible_count = visible_count + 1 %}
+                  <tr class="text-center">
+                    <td>{{ s.id }}</td>
+                    <td>{{ s.month or "-" }}</td>
+                    <td>₹ {{ "%.2f"|format(s.base_salary or 0) }}</td>
+                    <td>₹ {{ "%.2f"|format(s.deductions or 0) }}</td>
+                    <td class="fw-bold text-success">₹ {{ "%.2f"|format(s.net_salary or 0) }}</td>
+
+                    <td>
+                      {# Only show download link if slip belongs to viewer OR viewer is admin #}
+                      {% if s.slip_file and (is_admin or (viewer_id is not none and s.employee_id == viewer_id)) %}
+                        <a href="/salary/download/{{ s.id }}" class="btn btn-sm btn-outline-primary">
+                          <i class="bi bi-download"></i> Download
+                        </a>
+                      {% else %}
+                        <span class="text-muted">Not available</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% else %}
+                  {# skip rows that don't belong to the viewer #}
+                {% endif %}
+              {% endfor %}
+
+              {% if visible_count == 0 %}
+                <tr>
+                  <td colspan="6" class="text-center text-muted py-3">
+                    No salary records found for your account.
+                  </td>
+                </tr>
+              {% endif %}
+            {% endif %}
+          </tbody>
+
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+</section>
+
+{% endblock %}

@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin — Attendance</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    body { background: #f6f7fb; }
+    .muted-small { color:#6c757d; font-size:.95rem; }
+    .table-sm td, .table-sm th { vertical-align: middle; }
+    .spinner-center { display:flex; align-items:center; justify-content:center; min-height:120px; }
+  </style>
+</head>
+<body>
+  <nav class="navbar bg-white shadow-sm">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/admin/attendance">Attendance Reports</a>
+      <div class="d-flex">
+        <a class="btn btn-outline-secondary btn-sm me-2" href="/admin">Admin</a>
+        <a class="btn btn-outline-secondary btn-sm" href="/auth/logout">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h3 class="mb-0">Attendance — Admin Dashboard</h3>
+      <div class="text-end muted-small">
+        Today: <span id="summaryDate">—</span>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="card shadow-sm">
+          <div class="card-body d-flex align-items-center justify-content-between">
+            <div>
+              <div class="muted-small">Present</div>
+              <div id="presentCount" class="h4 mb-0">0</div>
+            </div>
+            <div><span class="badge bg-success p-2">✔</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card shadow-sm">
+          <div class="card-body d-flex align-items-center justify-content-between">
+            <div>
+              <div class="muted-small">Absent</div>
+              <div id="absentCount" class="h4 mb-0">0</div>
+            </div>
+            <div><span class="badge bg-danger p-2">✖</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card shadow-sm">
+          <div class="card-body d-flex align-items-center justify-content-between">
+            <div>
+              <div class="muted-small">Total Admins</div>
+              <div id="totalCount" class="h4 mb-0">0</div>
+            </div>
+            <div><span class="badge bg-secondary p-2">#</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3 shadow-sm">
+      <div class="card-body">
+        <div class="row gx-2">
+          <div class="col-md-5">
+            <input id="filterInput" class="form-control" placeholder="Search admin name..." />
+          </div>
+          <div class="col-md-7 text-end">
+            <button id="btnRefresh" class="btn btn-outline-primary btn-sm me-2">Refresh</button>
+            <button id="btnExport" class="btn btn-outline-secondary btn-sm">Export CSV</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Admin Presence</h5>
+
+        <div id="presenceSpinner" class="spinner-center">
+          <div class="spinner-border text-primary" role="status"></div>
+        </div>
+
+        <div id="presenceTableWrap" class="table-responsive d-none">
+          <table id="presenceTable" class="table table-sm align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Name</th>
+                <th>Check In</th>
+                <th>Check Out</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="presenceRows"></tbody>
+          </table>
+        </div>
+
+        <div id="presenceError" class="text-danger mt-2 d-none"></div>
+      </div>
+    </div>
+
+    <div class="card mt-4 shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Recent Attendance (All)</h5>
+        <div id="recentSpinner" class="spinner-center">
+          <div class="spinner-border text-secondary" role="status"></div>
+        </div>
+
+        <div id="recentWrap" class="table-responsive d-none">
+          <table id="recentTable" class="table table-sm table-hover">
+            <thead class="table-light">
+              <tr>
+                <th>Date</th>
+                <th>Employee</th>
+                <th>Check In</th>
+                <th>Check Out</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="recentRows"></tbody>
+          </table>
+        </div>
+
+        <div id="recentError" class="text-danger mt-2 d-none"></div>
+      </div>
+    </div>
+  </main>
+
+<script>
+/* Admin attendance page — consolidated JS */
+
+/* ---------- CSRF helper ---------- */
+function getCookie(name) {
+  const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return m ? m.pop() : '';
+}
+const CSRF_TOKEN = getCookie('csrftoken') || '';
+
+/* ---------- fetchJson (include credentials & CSRF) ---------- */
+async function fetchJson(url, opts = {}) {
+  const method = (opts.method || 'GET').toUpperCase();
+  const headers = Object.assign({}, opts.headers || {}, { "Accept": "application/json" });
+  if (!['GET','HEAD','OPTIONS','TRACE'].includes(method) && CSRF_TOKEN) {
+    headers['X-CSRFToken'] = CSRF_TOKEN;
+  }
+  const r = await fetch(url, { credentials: "include", ...opts, headers });
+  const text = await r.text();
+  let json = null;
+  try { json = text ? JSON.parse(text) : null; } catch (e) {}
+  if (!r.ok) {
+    const detail = (json && (json.detail || json.error)) ? (json.detail || json.error) : `HTTP ${r.status}`;
+    throw new Error(detail);
+  }
+  return json;
+}
+
+/* ---------- Date/time helpers ---------- */
+function parseIsoOrDate(value, fallbackDateStr = null) {
+  if (!value) return null;
+  if (value instanceof Date) return isNaN(value) ? null : value;
+
+  const timeOnlyMatch = typeof value === "string" && /^[0-2]?\d:[0-5]\d(:[0-5]\d)?$/.test(value.trim());
+  if (timeOnlyMatch) {
+    const datePart = fallbackDateStr ? fallbackDateStr : new Date().toISOString().slice(0,10);
+    const combined = `${datePart}T${value.trim()}`;
+    const d = new Date(combined);
+    return isNaN(d) ? null : d;
+  }
+
+  if (typeof value === "string") {
+    let s = value.trim();
+    if (/^\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2}(:\d{2})?/.test(s)) s = s.replace(" ", "T");
+    const d = new Date(s);
+    if (!isNaN(d)) return d;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      const d2 = new Date(s + "T00:00:00");
+      return isNaN(d2) ? null : d2;
+    }
+  }
+
+  try {
+    const d = new Date(value);
+    return isNaN(d) ? null : d;
+  } catch {
+    return null;
+  }
+}
+
+function fmtTime(d) {
+  if (!d) return "-";
+  try {
+    return new Date(d).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true });
+  } catch {
+    return "-";
+  }
+}
+
+function fmtDateFriendly(dateStrOrDate) {
+  if (!dateStrOrDate) return "-";
+  let d;
+  if (typeof dateStrOrDate === "string" && dateStrOrDate.indexOf("T") === -1 && /^\d{4}-\d{2}-\d{2}$/.test(dateStrOrDate)) {
+    d = new Date(dateStrOrDate + "T00:00:00");
+  } else {
+    d = new Date(dateStrOrDate);
+  }
+  if (isNaN(d)) return "-";
+  return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+}
+
+/* ---------- Rendering helpers ---------- */
+function escapeHtml(s) {
+  if (s === null || s === undefined) return "";
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+/* ---------- Admin summary + recent attendance ---------- */
+let adminsCache = [];
+
+async function loadAdminSummary() {
+  const spinner = document.getElementById("presenceSpinner");
+  const wrap = document.getElementById("presenceTableWrap");
+  const error = document.getElementById("presenceError");
+
+  spinner.classList.remove("d-none");
+  wrap.classList.add("d-none");
+  error.classList.add("d-none");
+
+  try {
+    const data = await fetchJson("/attendance/admin/summary");
+    document.getElementById("summaryDate").innerText = data.date || "-";
+    document.getElementById("presentCount").innerText = data.present_count ?? 0;
+    document.getElementById("absentCount").innerText = data.absent_count ?? 0;
+    document.getElementById("totalCount").innerText = data.total_admins ?? 0;
+
+    adminsCache = (data.admins || []).map(a => ({
+      id: a.id,
+      name: a.name || a.id,
+      check_in_raw: a.check_in || null,
+      check_out_raw: a.check_out || null,
+      present: !!a.present,
+      status: a.status || null,
+      date: data.date || null
+    }));
+
+    renderAdminRows(adminsCache);
+    wrap.classList.remove("d-none");
+  } catch (e) {
+    document.getElementById("presenceError").innerText = "Failed to load summary: " + e.message;
+    document.getElementById("presenceError").classList.remove("d-none");
+  } finally {
+    spinner.classList.add("d-none");
+  }
+}
+
+function renderAdminRows(list) {
+  const tbody = document.getElementById("presenceRows");
+  tbody.innerHTML = "";
+
+  if (!list || !list.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-muted">No admins found</td></tr>';
+    return;
+  }
+
+  list.forEach(a => {
+    const tr = document.createElement("tr");
+    const inDt = a.check_in_raw ? parseIsoOrDate(a.check_in_raw, a.date) : null;
+    const outDt = a.check_out_raw ? parseIsoOrDate(a.check_out_raw, a.date) : null;
+    const inStr = inDt ? fmtTime(inDt) : "-";
+    const outStr = outDt ? fmtTime(outDt) : "-";
+    const statusHtml = a.present ? '<span class="badge bg-success">Present</span>' : '<span class="badge bg-danger">Absent</span>';
+
+    tr.innerHTML = `
+      <td>${escapeHtml(a.name)}</td>
+      <td>${escapeHtml(inStr)}</td>
+      <td>${escapeHtml(outStr)}</td>
+      <td>${statusHtml}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function loadRecentAttendance() {
+  const spinner = document.getElementById("recentSpinner");
+  const wrap = document.getElementById("recentWrap");
+  const error = document.getElementById("recentError");
+
+  spinner.classList.remove("d-none");
+  wrap.classList.add("d-none");
+  error.classList.add("d-none");
+
+  try {
+    const rows = await fetchJson("/attendance/admin/data");
+    const tbody = document.getElementById("recentRows");
+    tbody.innerHTML = "";
+
+    if (!rows || !rows.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-muted">No attendance rows</td></tr>';
+    } else {
+      rows.forEach(r => {
+        const inDt = r.check_in ? parseIsoOrDate(r.check_in, r.date) : null;
+        const outDt = r.check_out ? parseIsoOrDate(r.check_out, r.date) : null;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${escapeHtml(fmtDateFriendly(r.date))}</td>
+          <td>${escapeHtml(r.employee_name || r.employee_id)}</td>
+          <td>${escapeHtml(fmtTime(inDt))}</td>
+          <td>${escapeHtml(fmtTime(outDt))}</td>
+          <td>${escapeHtml(r.status || "-")}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    wrap.classList.remove("d-none");
+  } catch (e) {
+    document.getElementById("recentError").innerText = "Failed to load recent attendance: " + e.message;
+    document.getElementById("recentError").classList.remove("d-none");
+  } finally {
+    spinner.classList.add("d-none");
+  }
+}
+
+/* ===== Filter & Export ===== */
+document.getElementById("filterInput").addEventListener("input", ev => {
+  const q = ev.target.value.trim().toLowerCase();
+  const filtered = q ? adminsCache.filter(a => (a.name || "").toLowerCase().includes(q)) : adminsCache;
+  renderAdminRows(filtered);
+});
+
+document.getElementById("btnRefresh").addEventListener("click", () => {
+  loadAdminSummary();
+  loadRecentAttendance();
+});
+
+document.getElementById("btnExport").addEventListener("click", () => {
+  if (!adminsCache.length) return alert("No data to export");
+
+  const rows = adminsCache.map(a => ({
+    id: a.id,
+    name: a.name,
+    check_in: a.check_in_raw || "",
+    check_out: a.check_out_raw || "",
+    present: a.present ? "Yes" : "No"
+  }));
+
+  const header = Object.keys(rows[0]);
+  const csv = [header.join(","), ...rows.map(r => header.map(h => `"${(String(r[h] ?? "")).replace(/"/g,'""')}"`).join(","))].join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `admin_presence_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ===== Init & Auto refresh ===== */
+(async function init() {
+  try {
+    await loadAdminSummary();
+    await loadRecentAttendance();
+  } catch (e) { console.error("Init error:", e); }
+})();
+
+setInterval(() => {
+  if (document.visibilityState === "visible") {
+    loadAdminSummary();
+    loadRecentAttendance();
+  }
+}, 60000);
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

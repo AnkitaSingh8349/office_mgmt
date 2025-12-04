@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tasks</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body { background: #f4f6f9; }
+        .task-card { border-radius: 10px; background: white; padding: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+        .table td, .table th { vertical-align: middle; }
+        .badge-completed { background: #28a745; color: white; padding: .3em .5em; border-radius: .35rem; }
+    </style>
+</head>
+
+<body>
+<div class="container mt-4">
+    <h2 class="mb-3">Task Management</h2>
+    <p class="text-muted">Logged in as: <strong>{{ user.name }}</strong> ({{ user.role }})</p>
+
+    {% if user.role == 'admin' %}
+    <div class="task-card mb-4">
+        <h4 class="mb-3">Create New Task</h4>
+        <form action="/tasks/create" method="post">
+            <div class="row mb-3">
+                <div class="col">
+                    <label class="form-label">Title</label>
+                    <input type="text" name="title" class="form-control" required>
+                </div>
+                <div class="col">
+                    <label class="form-label">Deadline</label>
+                    <input type="date" name="deadline" class="form-control">
+                </div>
+                <div class="col">
+                    <label class="form-label">Priority</label>
+                    <select name="priority" class="form-control">
+                        <option value="">Select</option>
+                        <option>Low</option>
+                        <option>Medium</option>
+                        <option>High</option>
+                    </select>
+                </div>
+            </div>
+
+           <div class="mb-3">
+    <label class="form-label">Assign To</label>
+    <select name="assigned_to_raw" class="form-control">
+        <option value="">-- Select Employee --</option>
+        {% for emp in employees %}
+            <option value="{{ emp.id }}">{{ emp.name }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-control"></textarea>
+            </div>
+
+            <button class="btn btn-primary">Create Task</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <div class="task-card">
+        <h4 class="mb-3">Task List</h4>
+
+        {% if tasks|length == 0 %}
+            <p class="text-muted">No tasks found.</p>
+        {% else %}
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Assigned To</th>
+                        <th>Deadline</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        {% if user.role == 'admin' %}
+                        <th>Completed By</th>
+                        {% endif %}
+                        <th style="width:200px">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for t in tasks %}
+                    <tr>
+                        <td>{{ t.id }}</td>
+                        <td>{{ t.title }}</td>
+
+                        <!-- Assigned to: prefer showing employee name if relationship exists -->
+                        <td>
+                            {% if t.employee is defined and t.employee %}
+                                {{ t.employee.id }} — {{ t.employee.name }}
+                            {% else %}
+                                {{ t.assigned_to or '-' }}
+                            {% endif %}
+                        </td>
+
+                        <td>{{ t.deadline or '-' }}</td>
+
+                        <td>
+                            {% if t.status == 'Completed' %}
+                                <span class="badge-completed">Completed</span>
+                            {% else %}
+                                {{ t.status or '-' }}
+                            {% endif %}
+                        </td>
+
+                        <td>{{ t.priority or '-' }}</td>
+
+                        <!-- Completed By column (only for admins) -->
+                        {% if user.role == 'admin' %}
+                        <td>
+                            {% if t.status == 'Completed' %}
+                                {% if t.employee is defined and t.employee %}
+                                    <div><strong>ID:</strong> {{ t.employee.id }}</div>
+                                    <div><strong>Name:</strong> {{ t.employee.name }}</div>
+                                    <div><strong>Email:</strong> {{ t.employee.email or '—' }}</div>
+                                {% else %}
+                                    <!-- fallback: show assigned_to id only -->
+                                    <div><strong>ID:</strong> {{ t.assigned_to or '—' }}</div>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+
+                        <td>
+                            {% if user.role == 'employee' %}
+                                {% if t.assigned_to == user.id and t.status != 'Completed' %}
+                                <form action="/tasks/{{ t.id }}/action" method="post" style="display:inline;">
+                                    <input type="hidden" name="action" value="complete">
+                                    <button class="btn btn-success btn-sm">Complete</button>
+                                </form>
+                                {% endif %}
+
+                                {% if t.assigned_to == None %}
+                                <form action="/tasks/{{ t.id }}/action" method="post" style="display:inline;">
+                                    <input type="hidden" name="action" value="accept">
+                                    <button class="btn btn-warning btn-sm">Accept</button>
+                                </form>
+                                {% endif %}
+                            {% endif %}
+
+                            {% if user.role == 'admin' %}
+                               
+
+                                <form action="/tasks/{{ t.id }}/action" method="post" style="display:inline;">
+                                    <input type="hidden" name="action" value="delete">
+                                    <button class="btn btn-danger btn-sm" onclick="return confirm('Delete this task?')">Delete</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</div>
+</body>
+</html>

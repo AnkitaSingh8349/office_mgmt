@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>My Attendance</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f6f7fb; }
+    .card-hero { border-radius: 12px; }
+    .time-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace; }
+    .muted-small { color:#6c757d; font-size:.95rem; }
+    .btn-wide { min-width:120px; }
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <div class="container">
+    <a class="navbar-brand" href="#">OfficeMgmt</a>
+    <div id="userRole" class="ms-auto text-white small-muted">Loading...</div>
+  </div>
+</nav>
+
+<main class="container py-4">
+  <div class="row">
+    <div class="col-lg-7">
+      <div class="card card-hero shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h5 class="card-title mb-1">Attendance — Today (<span id="todayDate">—</span>)</h5>
+              <div id="statusText" class="time-mono text-secondary">Loading...</div>
+              <div id="msg" class="mt-2 muted-small"></div>
+            </div>
+            <div class="text-end">
+              <div class="muted-small">Local time</div>
+              <div id="localClock" class="fw-bold time-mono"></div>
+            </div>
+          </div>
+
+          <div class="mt-3 d-flex gap-2 flex-wrap">
+            <button id="btnCheckIn" class="btn btn-success btn-wide">Check In</button>
+            <button id="btnCheckOut" class="btn btn-danger btn-wide">Check Out</button>
+            <button id="btnRefresh" class="btn btn-outline-secondary btn-wide">Refresh</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mt-3 shadow-sm">
+        <div class="card-body">
+          <h6 class="mb-2">Notes</h6>
+          <div class="muted-small">Mandstoty check in and  check out </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h6>Recent attendance (7 days)</h6>
+          <ul id="recentList" class="list-group list-group-flush small mt-2"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+/* Employee page JS (compatible with your FastAPI router)
+   Endpoints used:
+     GET  /attendance/status      -> returns today's status (check_in/check_out/can_checkin/can_checkout)
+     GET  /attendance/me?limit=N  -> returns attendance rows (attendance array)
+     POST /attendance/checkin
+     POST /attendance/checkout
+     GET  /attendance/debug-noauth (optional debug)
+*/
+
+/* ---------- Helpers ---------- */
+const $ = id => document.getElementById(id);
+
+function isoDate(d = new Date()) {
+  const tz = d.getTimezoneOffset() * 60000;
+  const local = new Date(d - tz);
+  return local.toISOString().slice(0,10);
+}
+
+// Robust parse that accepts:
+// - full ISO "2025-12-02T10:21:07+05:30"
+// - combined "YYYY-MM-DDTHH:MM:SS"
+// - date-only "YYYY-MM-DD" (interpreted as midnight)
+// - time-only "HH:MM:SS" (combined with date)
+function parseServerDateTime(dateVal, timeVal) {
+  if (!dateVal && !timeVal) return null;
+  try {
+    // If dateVal already contains 'T' (full ISO), parse directly
+    if (typeof dateVal === "string" && dateVal.includes("T")) {
+      const d = new Date(dateVal);
+      return isNaN(d) ? null : d;
+    }
+    // If timeVal already looks like ISO or contains 'T'
+    if (typeof timeVal === "string" && timeVal.includes("T")) {
+      const d = new Date(timeVal);
+      return isNaN(d) ? null : d;
+    }
+
+    // If both provided as strings, combine
+    if (dateVal && timeVal) {
+      let t = timeVal;
+      // if time only HH:MM optionally without seconds
+      if (/^\d{1,2}:\d{2}$/.test(t)) t += ":00";
+      const comb = `${dateVal}T${t}`.replace(' ', 'T');
+      const d = new Date(comb);
+      return isNaN(d) ? null : d;
+    }
+
+    // If only date provided (YYYY-MM-DD)
+    if (typeof dateVal === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+      const d = new Date(dateVal + "T00:00:00");
+      return isNaN(d) ? null : d;
+    }
+
+    // If only time provided -> combine with today
+    if (!dateVal && timeVal && typeof timeVal === "string") {
+      let t2 = timeVal;
+      if (/^\d{1,2}:\d{2}$/.test(t2)) t2 += ":00";
+      const today = isoDate();
+      const comb = `${today}T${t2}`;
+      const d = new Date(comb);
+      return isNaN(d) ? null : d;
+    }
+
+    // Fallback
+    const cand = (dateVal || "") + " " + (timeVal || "");
+    const d = new Date(cand.replace(' ', 'T'));
+    return isNaN(d) ? null : d;
+  } catch (e) {
+    return null;
+  }
+}
+
+function fmtTime(d) {
+  if (!d) return "-";
+  try {
+    const dt = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(dt)) return "-";
+    // show seconds + AM/PM
+    return dt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true });
+  } catch {
+    return "-";
+  }
+}
+
+function fmtDateFriendly(dateStr) {
+  if (!dateStr) return "-";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d)) {
+      // maybe date-only string "YYYY-MM-DD"
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const parts = dateStr.split("-");
+        const dd = new Date(parts[0], parseInt(parts[1],10)-1, parts[2]);
+        return dd.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+      }
+      return dateStr;
+    }
+    return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  } catch {
+    return dateStr;
+  }
+}
+
+/* ---------- Fetch wrapper (send cookies) ---------- */
+async function fetchJson(url, opts = {}) {
+  const res = await fetch(url, { credentials: "include", headers: { "Accept": "application/json" }, ...opts });
+  const text = await res.text();
+  let json = null;
+  try { json = text ? JSON.parse(text) : null; } catch {}
+  if (!res.ok) {
+    const detail = json && (json.detail || json.error) ? (json.detail || json.error) : `HTTP ${res.status}`;
+    const err = new Error(detail);
+    err.status = res.status;
+    err.responseJson = json;
+    throw err;
+  }
+  return json;
+}
+
+/* ---------- UI helpers ---------- */
+function showMsg(text, isError=false) {
+  const el = $("msg");
+  el.innerText = text || "";
+  el.classList.toggle("text-danger", !!isError);
+}
+
+/* ---------- Core: load status + recent ---------- */
+async function loadStatusAndRecent() {
+  // Use /attendance/status for today's quick status (exists in router)
+  try {
+    const status = await fetchJson('/attendance/status');
+    // status fields: check_in, check_out, check_in_display, check_out_display, can_checkin, can_checkout, date
+    const inVal = status.check_in || status.check_in_display || null;
+    const outVal = status.check_out || status.check_out_display || null;
+    const inDt = parseServerDateTime(status.date, status.check_in) || parseServerDateTime(status.date, status.check_in_display);
+    const outDt = parseServerDateTime(status.date, status.check_out) || parseServerDateTime(status.date, status.check_out_display);
+
+    $("statusText").innerText = `In: ${fmtTime(inDt)}   Out: ${fmtTime(outDt)}`;
+    $("btnCheckIn").disabled = !status.can_checkin ? true : false;
+    $("btnCheckOut").disabled = !status.can_checkout ? true : false;
+    showMsg("", false);
+  } catch (err) {
+    if (err.status === 401) {
+      showMsg("Not authenticated — please log in on this browser/session.", true);
+      $("statusText").innerText = "Not authenticated";
+      $("btnCheckIn").disabled = true;
+      $("btnCheckOut").disabled = true;
+      return;
+    }
+    console.error("status load error", err);
+    showMsg(err.message || "Failed to load status", true);
+  }
+
+  // Load recent attendance rows from /attendance/me
+  try {
+    const payload = await fetchJson('/attendance/me?limit=50');
+    const rows = payload.attendance || [];
+    renderRecent(rows);
+  } catch (err) {
+    if (err.status === 401) {
+      // show a short message but keep the UI readable
+      showMsg("Not authenticated — cannot load attendance history.", true);
+      return;
+    }
+    console.error("recent load error", err);
+    showMsg(err.message || "Failed to load attendance history", true);
+  }
+}
+
+function renderRecent(rows) {
+  const list = $("recentList");
+  list.innerHTML = "";
+  // convert rows to a map by date for quick lookup
+  const byDate = {};
+  rows.forEach(r => { byDate[String(r.date)] = r; });
+
+  // show last 7 calendar days
+  for (let i=0;i<7;i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const ds = isoDate(d);
+    const r = byDate[ds] || null;
+    const inDt = r ? parseServerDateTime(r.date, r.check_in) || parseServerDateTime(r.date, r.check_in_display) : null;
+    const outDt = r ? parseServerDateTime(r.date, r.check_out) || parseServerDateTime(r.date, r.check_out_display) : null;
+
+    const li = document.createElement('li');
+    li.className = "list-group-item d-flex justify-content-between align-items-center";
+    li.innerHTML = `<div>${fmtDateFriendly(ds)}</div>
+                    <div class="text-muted small">${fmtTime(inDt)} / ${fmtTime(outDt)}</div>`;
+    list.appendChild(li);
+  }
+}
+
+/* ---------- Actions ---------- */
+async function doCheckIn() {
+  showMsg("Processing check-in...");
+  $("btnCheckIn").disabled = true;
+  $("btnCheckOut").disabled = true;
+  try {
+    const res = await fetchJson('/attendance/checkin', { method: 'POST' });
+    // router returns {"success":True,...,"check_in": "YYYY-MM-DDTHH:MM:SS" }
+    showMsg(res.message || "Checked in");
+    await loadStatusAndRecent();
+  } catch (err) {
+    console.error("checkin error", err);
+    if (err.status === 401) {
+      showMsg("Not authenticated — cannot check in.", true);
+      return;
+    }
+    showMsg(err.message || "Check-in failed", true);
+    try { await loadStatusAndRecent(); } catch {}
+  }
+}
+
+async function doCheckOut() {
+  showMsg("Processing check-out...");
+  $("btnCheckIn").disabled = true;
+  $("btnCheckOut").disabled = true;
+  try {
+    const res = await fetchJson('/attendance/checkout', { method: 'POST' });
+    showMsg(res.message || "Checked out");
+    await loadStatusAndRecent();
+  } catch (err) {
+    console.error("checkout error", err);
+    if (err.status === 401) {
+      showMsg("Not authenticated — cannot check out.", true);
+      return;
+    }
+    showMsg(err.message || "Check-out failed", true);
+    try { await loadStatusAndRecent(); } catch {}
+  }
+}
+
+/* ---------- Live local clock ---------- */
+function startLocalClock() {
+  const el = $("localClock");
+  function tick() {
+    el.innerText = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true });
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+/* ---------- Debug helper (useful while troubleshooting) ---------- */
+async function runDebug() {
+  try {
+    const debug = await fetchJson('/attendance/debug-noauth');
+    console.log('debug-noauth', debug);
+  } catch (e) {
+    console.warn('debug-noauth failed', e);
+  }
+}
+
+/* ---------- Init wiring ---------- */
+$("btnCheckIn").addEventListener("click", doCheckIn);
+$("btnCheckOut").addEventListener("click", doCheckOut);
+$("btnRefresh").addEventListener("click", loadStatusAndRecent);
+
+(async function init() {
+  $("todayDate").innerText = isoDate();
+  startLocalClock();
+  try {
+    // try to get basic status & recent rows
+    await loadStatusAndRecent();
+  } catch (e) {
+    console.error("init error", e);
+  }
+  // optional: uncomment to print server debug info to console
+  // await runDebug();
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

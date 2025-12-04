@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Leaves Dashboard</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        .truncate { max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    </style>
+</head>
+<body class="bg-light">
+
+<script>
+    const ROLE = "{{ role }}";
+    const USER_NAME = "{{ user_name }}";
+    const USER_ID = "{{ user_id }}";
+    const API_BASE = "/api/leaves";
+</script>
+
+<nav id="nav" class="navbar navbar-expand-lg mb-4"></nav>
+<main id="content" class="container"></main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+
+/* ---------------- NAV BAR ---------------- */
+function renderNav() {
+    const nav = document.getElementById("nav");
+    const color = ROLE === "admin" ? "bg-primary" : "bg-success";
+
+    nav.className = `navbar navbar-dark ${color} mb-4`;
+    nav.innerHTML = `
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Leaves</a>
+            <div class="text-end text-white">
+                <div>${USER_NAME || (ROLE === "admin" ? "Admin" : "Employee")}</div>
+                <div style="font-size:12px; opacity:0.8">Role: ${ROLE}</div>
+            </div>
+            <a href="/logout" class="btn btn-outline-light btn-sm ms-3">Logout</a>
+        </div>
+    `;
+}
+
+/* ---------------- UTIL ---------------- */
+const fmtDate = d => d ? new Date(d).toLocaleDateString() : "-";
+
+function badge(status) {
+    return {
+        "Approved": '<span class="badge bg-success">Approved</span>',
+        "Rejected": '<span class="badge bg-danger">Rejected</span>',
+        "Cancelled": '<span class="badge bg-secondary">Cancelled</span>',
+        "Pending": '<span class="badge bg-warning text-dark">Pending</span>'
+    }[status] || status;
+}
+
+/* ---------------- FETCH (Fixed: include cookies) ---------------- */
+async function fetchLeaves(mine=false) {
+    try {
+        const res = await fetch(
+            mine ? `${API_BASE}?mine=true` : API_BASE,
+            { credentials: "same-origin" }
+        );
+        return await res.json();
+    } catch (e) { return []; }
+}
+
+/* ---------------- ADMIN VIEW ---------------- */
+function adminView() {
+    document.getElementById("content").innerHTML = `
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title">All Leave Requests</h5>
+                <table class="table table-hover" id="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Employee</th>
+                            <th>Type</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6>Activity Log</h6>
+                <div id="log">No activity yet</div>
+            </div>
+        </div>
+    `;
+
+    loadAdminTable();
+}
+
+/* Load Admin Table FIXED */
+async function loadAdminTable() {
+    const tbody = document.querySelector("#admin-table tbody");
+    const data = await fetchLeaves(false);
+    tbody.innerHTML = "";
+
+    if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted">No leaves found</td></tr>`;
+        return;
+    }
+
+    data.forEach(l => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${l.id}</td>
+                <td>${l.employee_name || l.employee_id}</td>
+                <td>${l.leave_type}</td>
+                <td>${fmtDate(l.from_date)}</td>
+                <td>${fmtDate(l.to_date)}</td>
+                <td class="truncate">${l.reason || ""}</td>
+                <td>${badge(l.status)}</td>
+                <td>${adminButtons(l)}</td>
+            </tr>
+        `;
+    });
+}
+
+function adminButtons(l) {
+    if (l.status === "Pending") {
+        return `
+            <button class="btn btn-sm btn-success" onclick="action(${l.id}, 'approve')">Approve</button>
+            <button class="btn btn-sm btn-danger" onclick="action(${l.id}, 'reject')">Reject</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="action(${l.id}, 'cancel')">Cancel</button>
+        `;
+    }
+    return `<button class="btn btn-sm btn-outline-secondary" onclick="action(${l.id}, 'cancel')">Cancel</button>`;
+}
+
+/* ---------------- FIXED ACTION: Include cookies ---------------- */
+async function action(id, act) {
+    if (act === "cancel" && !confirm("Cancel this leave?")) return;
+
+    await fetch(`${API_BASE}/${id}/${act}`, {
+        method: "POST",
+        credentials: "same-origin"
+    });
+
+    log(`Leave ${id} → ${act}`);
+    loadAdminTable();
+}
+
+function log(msg) {
+    const el = document.getElementById("log");
+    el.innerHTML = `<div>${new Date().toLocaleTimeString()} — ${msg}</div>` + el.innerHTML;
+}
+
+/* ---------------- EMPLOYEE VIEW ---------------- */
+function employeeView() {
+    document.getElementById("content").innerHTML = `
+        <div class="row">
+            <div class="col-lg-5">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5>Apply for Leave</h5>
+
+                        <form id="leaveForm">
+                            <label>Leave Type</label>
+                            <select name="leave_type" class="form-select mb-2" required>
+                                <option>Casual</option>
+                                <option>Sick</option>
+                                <option>Earned</option>
+                            </select>
+
+                            <label>From</label>
+                            <input type="date" name="from_date" class="form-control mb-2" required>
+
+                            <label>To</label>
+                            <input type="date" name="to_date" class="form-control mb-2" required>
+
+                            <label>Reason</label>
+                            <textarea name="reason" class="form-control mb-3"></textarea>
+
+                            <button class="btn btn-primary">Apply</button>
+                        </form>
+
+                        <div id="msg"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5>My Leave Requests</h5>
+
+                        <table class="table table-striped" id="myTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Type</th>
+                                    <th>From</th>
+                                    <th>To</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById("leaveForm").onsubmit = submitLeave;
+    loadMyLeaves();
+}
+
+async function submitLeave(e) {
+    e.preventDefault();
+
+    const data = Object.fromEntries(new FormData(e.target));
+    const msg = document.getElementById("msg");
+
+    const res = await fetch(API_BASE, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
+
+    if (res.ok) {
+        msg.innerHTML = `<div class='text-success'>Leave Applied</div>`;
+        e.target.reset();
+        loadMyLeaves();
+    } else {
+        msg.innerHTML = `<div class='text-danger'>Failed</div>`;
+    }
+}
+
+async function loadMyLeaves() {
+    const tbody = document.querySelector("#myTable tbody");
+    const data = await fetchLeaves(true);
+    tbody.innerHTML = "";
+
+    if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No requests</td></tr>`;
+        return;
+    }
+
+    data.forEach(l => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${l.id}</td>
+                <td>${l.leave_type}</td>
+                <td>${fmtDate(l.from_date)}</td>
+                <td>${fmtDate(l.to_date)}</td>
+                <td class="truncate">${l.reason || ""}</td>
+                <td>${badge(l.status)}</td>
+                <td>
+                    ${l.status === "Pending" ? `<button class="btn btn-sm btn-outline-danger" onclick="cancelMy(${l.id})">Cancel</button>` : ""}
+                </td>
+            </tr>
+        `;
+    });
+}
+
+/* FIXED cancelMy() */
+async function cancelMy(id) {
+    if (!confirm("Cancel leave?")) return;
+
+    await fetch(`${API_BASE}/${id}/cancel`, {
+        method: "POST",
+        credentials: "same-origin"
+    });
+
+    loadMyLeaves();
+}
+
+/* ---------------- BOOT ---------------- */
+renderNav();
+ROLE === "admin" ? adminView() : employeeView();
+
+</script>
+
+</body>
+</html>

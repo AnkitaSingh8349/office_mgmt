@@ -1,0 +1,185 @@
+{% extends "go_admin.html" %}
+{% block content %}
+
+{# Small inline styles to match the admin look — feel free to move to your CSS file #}
+<style>
+  body.salary-page {
+    background: #f4f6f9; /* soft gray background */
+  }
+  .page-title {
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  .stat-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 18px;
+    box-shadow: 0 4px 14px rgba(18, 38, 63, 0.04);
+  }
+  .table-card {
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .table thead th {
+    background: #23272b; /* dark header like screenshot */
+    color: #fff;
+    border: 0;
+  }
+  .table tbody tr:nth-child(odd) { background: #fbfbfb; }
+  .table tbody td { vertical-align: middle; }
+  .download-btn {
+    min-width: 110px;
+  }
+</style>
+
+<div class="container-fluid salary-page py-4">
+
+  <!-- PAGE HEADER -->
+  <div class="mb-4">
+    <div class="d-flex align-items-center justify-content-between">
+      <div>
+        <h1 class="page-title mb-1">💰 Salary / Reports</h1>
+        <div class="small text-muted">Welcome {{ user.name or user.get('name', 'Employee') }} — you are logged in as <strong class="text-capitalize">{{ (user.role or user.get('role', 'employee')) }}</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS ROW (small cards like admin) -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="stat-card d-flex justify-content-between align-items-center">
+        <div>
+          <div class="text-muted small">Attendance</div>
+          <div class="h4 mb-0">—</div>
+          <div class="small text-muted">Total present (all employees)</div>
+        </div>
+        <div class="display-5 text-primary">—</div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="stat-card d-flex justify-content-between align-items-center">
+        <div>
+          <div class="text-muted small">Absent</div>
+          <div class="h4 mb-0">—</div>
+          <div class="small text-muted">Leaves recorded this month</div>
+        </div>
+        <div class="display-5 text-danger">—</div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="stat-card d-flex justify-content-between align-items-center">
+        <div>
+          <div class="text-muted small">Employees</div>
+          <div class="h4 mb-0">{{ total_employees or '—' }}</div>
+          <div class="small text-muted">Total employees</div>
+        </div>
+        <div class="display-5 text-success">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN TABLE CARD -->
+  <div class="card table-card shadow-sm">
+    <div class="card-body p-0">
+      <div class="p-4 border-bottom">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-0">My Salary Slips</h5>
+            <small class="text-muted">Only your salaries are shown (admins see all)</small>
+          </div>
+          <div class="text-end">
+            <div class="small text-muted">Email: <strong>{{ user.email or user.get('email', '-') }}</strong></div>
+            <div class="small text-muted">Name: <strong>{{ user.name or user.get('name', '-') }}</strong></div>
+          </div>
+        </div>
+      </div>
+
+      {# compute viewer & admin flags once #}
+      {% set viewer_id = None %}
+      {% if user is defined and user %}
+        {% if user.id is defined %}
+          {% set viewer_id = user.id %}
+        {% elif user.get is defined %}
+          {% set viewer_id = user.get('id') %}
+        {% endif %}
+      {% endif %}
+
+      {% set is_admin = False %}
+      {% if user is defined and (user.role is defined or user.get is defined) %}
+        {% set role_val = (user.role if user.role is defined else (user.get('role') if user.get is defined else '')) %}
+        {% if (role_val|string).lower().find('admin') != -1 %}
+          {% set is_admin = True %}
+        {% endif %}
+      {% endif %}
+
+      <div class="table-responsive">
+        <table class="table table-hover table-bordered mb-0 align-middle">
+          <thead>
+            <tr class="text-center">
+              <th style="width:80px">S. No</th>
+              <th style="min-width:160px">Month</th>
+              <th style="min-width:160px">Base Salary</th>
+              <th style="min-width:140px">Deductions</th>
+              <th style="min-width:140px">Net Salary</th>
+              <th style="min-width:160px">Payslip</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% if not salaries %}
+              <tr>
+                <td colspan="6" class="text-center py-5 text-muted">No salary records available.</td>
+              </tr>
+            {% else %}
+              {% set shown = 0 %}
+              {% for s in salaries %}
+                {% if is_admin or (viewer_id is not none and s.employee_id == viewer_id) %}
+                  {% set shown = shown + 1 %}
+                  <tr class="text-center">
+                    <td class="fw-semibold">{{ loop.index }}</td>
+
+                    <td>
+                      <div class="fw-medium">{{ s.month or '-' }}</div>
+                    </td>
+
+                    <td>₹ {{ "%.2f"|format(s.base_salary or 0) }}</td>
+                    <td class="text-danger">₹ {{ "%.2f"|format(s.deductions or 0) }}</td>
+                    <td class="fw-bold text-success">₹ {{ "%.2f"|format(s.net_salary or 0) }}</td>
+
+                    <td>
+                      {% if s.slip_file or s.slip_filename or s.file_name %}
+                        <a
+                          href="{{ request.url_for('download_salary', salary_id=s.id) }}"
+                          class="btn btn-success btn-sm download-btn d-inline-flex align-items-center"
+                          title="Open payslip for {{ s.month or '' }}"
+                          target="_blank" rel="noopener noreferrer"
+                        >
+                          <i class="bi bi-cloud-download-fill me-2" aria-hidden="true"></i> Download
+                        </a>
+                      {% else %}
+                        <button class="btn btn-outline-secondary btn-sm" disabled>Not available</button>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endif %}
+              {% endfor %}
+
+              {% if shown == 0 %}
+                <tr>
+                  <td colspan="6" class="text-center py-4 text-muted">No salary records found for your account.</td>
+                </tr>
+              {% endif %}
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
