@@ -1,2 +1,9 @@
-uvicorn[standard]==0.22.0
 fastapi
+uvicorn[standard]==0.22.0
+itsdangerous
+python-dotenv
+jinja2
+python-multipart
+pydantic
+email-validator
+passlib[bcrypt]
