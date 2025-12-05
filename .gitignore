@@ -1,0 +1,6 @@
+app\employees.db
+media\
+app\media\
+app\static\uploads\
+venv\
+__pycache__\
