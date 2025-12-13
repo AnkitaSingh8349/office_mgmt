@@ -22,8 +22,6 @@
             color: #009970;
         }
     </style>
-
-    
 </head>
 
 <body>
@@ -42,19 +40,40 @@
 
                     <div id="signupAlert" class="alert alert-danger d-none"></div>
 
+                    <!-- Full Name -->
                     <div class="mb-3">
                         <label class="form-label">Full Name</label>
                         <input type="text" name="name" class="form-control" placeholder="Your name" required>
                     </div>
 
+                    <!-- Email -->
                     <div class="mb-3">
                         <label class="form-label">Email</label>
                         <input type="email" name="email" class="form-control" placeholder="you@example.com" required>
                     </div>
 
+                    <!-- Password -->
                     <div class="mb-3">
                         <label class="form-label">Password</label>
-                        <input type="password" name="password" class="form-control" required placeholder="Password">
+                        <input type="password" name="password" class="form-control" placeholder="Password" required>
+                    </div>
+
+                    <!-- Birthday -->
+                    <div class="mb-3">
+                        <label class="form-label">Birthday</label>
+                        <input type="date" name="birthday" class="form-control" required>
+                    </div>
+
+                    <!-- Address -->
+                    <div class="mb-3">
+                        <label class="form-label">Address</label>
+                        <textarea name="address" class="form-control" rows="2" placeholder="Your address" required></textarea>
+                    </div>
+
+                    <!-- Phone Number -->
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" name="phone" class="form-control" placeholder="09xxxxxxxxx" required>
                     </div>
 
                     <button class="btn btn-success w-100">Create Account</button>
@@ -71,8 +90,8 @@
         </div>
     </div>
 </div>
-<script src="/static/js/auth.js" defer></script>
 
+<script src="/static/js/auth.js" defer></script>
 
 </body>
 </html>

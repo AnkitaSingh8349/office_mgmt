@@ -4,3 +4,24 @@ app\media\
 app\static\uploads\
 venv\
 __pycache__\
+
+# Environment variables
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Databases
+*.db
+
+# Uploaded files
+app/static/uploads/
+
+# Local data
+data/
+
+# Misc
+uvicorn
+cd
+

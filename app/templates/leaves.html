@@ -23,26 +23,77 @@
 <nav id="nav" class="navbar navbar-expand-lg mb-4"></nav>
 <main id="content" class="container"></main>
 
+<!-- Notify / Message Modal (Bootstrap) -->
+<div class="modal fade" id="notifyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="notifyForm" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="notifyModalTitle">Send Message</h5>
+        <button type="button" class="btn btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="notifyLeaveId" />
+        <div class="mb-2">
+          <label class="form-label">To</label>
+          <input id="notifyTo" class="form-control" readonly />
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Subject</label>
+          <input id="notifySubject" class="form-control" required />
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Message</label>
+          <textarea id="notifyMessage" class="form-control" rows="8" required></textarea>
+        </div>
+        <div id="notifyError" class="text-danger small"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="submit" class="btn btn-primary">Send</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-
-/* ---------------- NAV BAR ---------------- */
+/* ---------------- NAV BAR (show bell for admin & employee) ---------------- */
 function renderNav() {
     const nav = document.getElementById("nav");
     const color = ROLE === "admin" ? "bg-primary" : "bg-success";
 
     nav.className = `navbar navbar-dark ${color} mb-4`;
+
+    // notification button (show for both admin & employee)
+    const notifHtml = `
+        <div class="dropdown me-3">
+          <button id="notifBtn" class="btn btn-outline-light btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            🔔 <span id="notifCount" class="badge bg-danger" style="display:none">0</span>
+          </button>
+          <ul id="notifDropdown" class="dropdown-menu dropdown-menu-end" style="min-width:360px">
+            <li class="dropdown-item text-muted">Loading...</li>
+          </ul>
+        </div>
+    `;
+
     nav.innerHTML = `
         <div class="container-fluid">
             <a class="navbar-brand" href="#">Leaves</a>
-            <div class="text-end text-white">
-                <div>${USER_NAME || (ROLE === "admin" ? "Admin" : "Employee")}</div>
-                <div style="font-size:12px; opacity:0.8">Role: ${ROLE}</div>
+            <div class="d-flex align-items-center ms-auto">
+                ${notifHtml}
+                <div class="text-end text-white">
+                    <div>${USER_NAME || (ROLE === "admin" ? "Admin" : "Employee")}</div>
+                    <div style="font-size:12px; opacity:0.8">Role: ${ROLE}</div>
+                </div>
+                <a href="/logout" class="btn btn-outline-light btn-sm ms-3">Logout</a>
             </div>
-            <a href="/logout" class="btn btn-outline-light btn-sm ms-3">Logout</a>
         </div>
     `;
+
+    // fetch notifications immediately for both roles and poll periodically
+    fetchNotifications();
+    setInterval(fetchNotifications, 20000);
 }
 
 /* ---------------- UTIL ---------------- */
@@ -57,7 +108,7 @@ function badge(status) {
     }[status] || status;
 }
 
-/* ---------------- FETCH (Fixed: include cookies) ---------------- */
+/* ---------------- FETCH ---------------- */
 async function fetchLeaves(mine=false) {
     try {
         const res = await fetch(
@@ -65,7 +116,7 @@ async function fetchLeaves(mine=false) {
             { credentials: "same-origin" }
         );
         return await res.json();
-    } catch (e) { return []; }
+    } catch (e) { console.error("fetchLeaves:", e); return []; }
 }
 
 /* ---------------- ADMIN VIEW ---------------- */
@@ -79,6 +130,7 @@ function adminView() {
                         <tr>
                             <th>ID</th>
                             <th>Employee</th>
+                            <th>Email</th>
                             <th>Type</th>
                             <th>From</th>
                             <th>To</th>
@@ -103,14 +155,14 @@ function adminView() {
     loadAdminTable();
 }
 
-/* Load Admin Table FIXED */
+/* Load Admin Table */
 async function loadAdminTable() {
     const tbody = document.querySelector("#admin-table tbody");
     const data = await fetchLeaves(false);
     tbody.innerHTML = "";
 
     if (!data.length) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted">No leaves found</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted">No leaves found</td></tr>`;
         return;
     }
 
@@ -119,6 +171,7 @@ async function loadAdminTable() {
             <tr>
                 <td>${l.id}</td>
                 <td>${l.employee_name || l.employee_id}</td>
+                <td class="text-break">${l.employee_email || ""}</td>
                 <td>${l.leave_type}</td>
                 <td>${fmtDate(l.from_date)}</td>
                 <td>${fmtDate(l.to_date)}</td>
@@ -130,33 +183,292 @@ async function loadAdminTable() {
     });
 }
 
+/* adminButtons */
 function adminButtons(l) {
+    let base = "";
+
     if (l.status === "Pending") {
-        return `
+        base = `
             <button class="btn btn-sm btn-success" onclick="action(${l.id}, 'approve')">Approve</button>
             <button class="btn btn-sm btn-danger" onclick="action(${l.id}, 'reject')">Reject</button>
             <button class="btn btn-sm btn-outline-secondary" onclick="action(${l.id}, 'cancel')">Cancel</button>
         `;
+    } else {
+        base = `<button class="btn btn-sm btn-outline-secondary" onclick="action(${l.id}, 'cancel')">Cancel</button>`;
     }
-    return `<button class="btn btn-sm btn-outline-secondary" onclick="action(${l.id}, 'cancel')">Cancel</button>`;
+
+    return base + `
+        <button class="btn btn-sm btn-primary" onclick="openNotifyModal(${l.id}, 'employee', '${(l.employee_name || '').replace(/'/g, "\\'")}', '${(l.employee_email || '').replace(/'/g, "\\'")}')">Message</button>
+    `;
 }
 
-/* ---------------- FIXED ACTION: Include cookies ---------------- */
+/* ACTION */
 async function action(id, act) {
     if (act === "cancel" && !confirm("Cancel this leave?")) return;
 
-    await fetch(`${API_BASE}/${id}/${act}`, {
+    const res = await fetch(`${API_BASE}/${id}/${act}`, {
         method: "POST",
         credentials: "same-origin"
     });
 
-    log(`Leave ${id} → ${act}`);
-    loadAdminTable();
+    if (!res.ok) {
+        alert("Action failed");
+    } else {
+        log(`Leave ${id} → ${act}`);
+        ROLE === "admin" ? loadAdminTable() : loadMyLeaves();
+    }
 }
 
 function log(msg) {
     const el = document.getElementById("log");
     el.innerHTML = `<div>${new Date().toLocaleTimeString()} — ${msg}</div>` + el.innerHTML;
+}
+
+/* ---------------- NOTIFICATIONS & MESSAGES (admin + employee) ---------------- */
+
+const notifyModalEl = document.getElementById('notifyModal');
+const notifyModal = new bootstrap.Modal(notifyModalEl);
+
+/* Open notify modal (used by both admin and employee buttons) */
+function openNotifyModal(leaveId, toType, name, email) {
+    document.getElementById('notifyLeaveId').value = leaveId;
+    document.getElementById('notifySubject').value = `Update on leave #${leaveId}`;
+    document.getElementById('notifyMessage').value = `Hello ${name || (toType === 'employee' ? 'Employee' : 'Admin')},\n\n`;
+    document.getElementById('notifyError').innerText = "";
+
+    if (toType === 'employee') {
+        document.getElementById('notifyTo').value = email || 'No email on record';
+    } else {
+        document.getElementById('notifyTo').value = 'Admin';
+    }
+
+    notifyModal.show();
+}
+
+/* unified fetchNotifications: admin uses /notifications; employee aggregates messages from own leaves */
+async function fetchNotifications() {
+    if (ROLE === "admin") {
+        // admin: use server notifications endpoint
+        try {
+            const res = await fetch(`${API_BASE}/notifications`, { credentials: "same-origin" });
+            if (!res.ok) {
+                const dd = document.getElementById("notifDropdown");
+                if (dd) dd.innerHTML = `<li class="dropdown-item text-danger">Failed to load</li>`;
+                return;
+            }
+            const items = await res.json();
+            renderNotifications(items);
+        } catch (e) {
+            console.error("fetchNotifications (admin):", e);
+            const dd = document.getElementById("notifDropdown");
+            if (dd) dd.innerHTML = `<li class="dropdown-item text-danger">Network error</li>`;
+        }
+        return;
+    }
+
+    // Employee: aggregate messages for user's leaves
+    try {
+        const leavesRes = await fetch(`${API_BASE}?mine=true`, { credentials: "same-origin" });
+        if (!leavesRes.ok) {
+            const dd = document.getElementById("notifDropdown");
+            if (dd) dd.innerHTML = `<li class="dropdown-item text-danger">Failed to load</li>`;
+            return;
+        }
+        const leaves = await leavesRes.json();
+
+        const msgPromises = leaves.map(l =>
+            fetch(`${API_BASE}/${l.id}/messages`, { credentials: "same-origin" })
+                .then(r => r.ok ? r.json() : [])
+                .catch(() => [])
+        );
+        const allMsgs = await Promise.all(msgPromises);
+
+        const items = [];
+        leaves.forEach((l, idx) => {
+            const msgs = allMsgs[idx] || [];
+            msgs.forEach(m => {
+                items.push({
+                    id: m.id || `${l.id}_${m.created_at}`,
+                    leave_id: l.id,
+                    subject: m.subject || (`Message about leave #${l.id}`),
+                    body: m.body || "",
+                    sender_role: m.sender_role,
+                    sender_id: m.sender_id,
+                    created_at: m.created_at || new Date().toISOString()
+                });
+            });
+        });
+
+        items.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+        renderNotifications(items);
+    } catch (e) {
+        console.error("fetchNotifications (employee):", e);
+        const dd = document.getElementById("notifDropdown");
+        if (dd) dd.innerHTML = `<li class="dropdown-item text-danger">Network error</li>`;
+    }
+}
+
+/* renderNotifications: works for both roles */
+function renderNotifications(items) {
+    const dd = document.getElementById("notifDropdown");
+    const countEl = document.getElementById("notifCount");
+    if (!dd) return;
+
+    // ADMIN path: server-provided items with is_read flag
+    if (ROLE === "admin") {
+        if (!items || items.length === 0) {
+            dd.innerHTML = `<li class="dropdown-item text-muted">No new notifications</li>`;
+            if (countEl) countEl.style.display = "none";
+            return;
+        }
+        const unread = items.filter(i => !i.is_read).length;
+        if (countEl) {
+            countEl.style.display = unread ? "inline-block" : "none";
+            countEl.innerText = unread || 0;
+        }
+
+        dd.innerHTML = items.slice(0,6).map(n => {
+            const preview = (n.body || "").slice(0, 90).replace(/\n/g, " ");
+            return `
+                <li>
+                  <a class="dropdown-item d-flex justify-content-between align-items-start" href="#" onclick="openMessageThread(${n.leave_id}); return false;">
+                    <div>
+                      <div class="fw-bold truncate">Leave #${n.leave_id} — ${n.subject || '(no subject)'}</div>
+                      <div class="small text-muted">${preview}</div>
+                    </div>
+                    <div class="small text-muted">${new Date(n.created_at).toLocaleTimeString()}</div>
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+            `;
+        }).join("") + `<li><a class="dropdown-item text-center" href="#" onclick="openAllNotifications(); return false;">View all</a></li>`;
+
+        return;
+    }
+
+    // EMPLOYEE path: items are messages across user's leaves
+    if (!items || items.length === 0) {
+        dd.innerHTML = `<li class="dropdown-item text-muted">No messages</li>`;
+        if (countEl) countEl.style.display = "none";
+        return;
+    }
+
+    // last-seen stored per user in localStorage
+    const lastSeenKey = `last_seen_msgs_user_${USER_ID || 'anon'}`;
+    const lastSeen = localStorage.getItem(lastSeenKey) || null;
+    let unreadCount = 0;
+    const rows = [];
+
+    items.forEach(m => {
+        // treat incoming if sender_role === 'admin'
+        if (m.sender_role === 'admin') {
+            if (!lastSeen || new Date(m.created_at) > new Date(lastSeen)) {
+                unreadCount++;
+            }
+        }
+        const preview = (m.body || "").slice(0, 90).replace(/\n/g, " ");
+        rows.push(`
+            <li>
+              <a class="dropdown-item d-flex justify-content-between align-items-start" href="#" onclick="openMessageThread(${m.leave_id}); return false;">
+                <div>
+                  <div class="fw-bold truncate">Leave #${m.leave_id} — ${m.subject || '(no subject)'}</div>
+                  <div class="small text-muted">${preview}</div>
+                </div>
+                <div class="small text-muted">${new Date(m.created_at).toLocaleTimeString()}</div>
+              </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+        `);
+    });
+
+    if (countEl) {
+        countEl.style.display = unreadCount ? "inline-block" : "none";
+        countEl.innerText = unreadCount;
+    }
+
+    dd.innerHTML = rows.slice(0, 6).join("") + `<li><a class="dropdown-item text-center" href="#" onclick="openAllNotifications(); return false;">View all</a></li>`;
+}
+
+/* Mark notification as read (admin only) */
+async function markNotificationRead(id) {
+    try {
+        const res = await fetch(`${API_BASE}/notifications/${id}/mark_read`, {
+            method: "POST",
+            credentials: "same-origin"
+        });
+        if (res.ok) {
+            fetchNotifications();
+        } else {
+            console.warn("markNotificationRead failed");
+        }
+    } catch (e) { console.error(e); }
+}
+
+/* Open message thread modal for a specific leave (admin or employee) */
+async function openMessageThread(leaveId) {
+    // load messages
+    const messages = await loadLeaveMessages(leaveId);
+
+    // build modal content (re-using bootstrap modal already present: notifyModal)
+    const title = `Messages for leave #${leaveId}`;
+    document.getElementById('notifyModalTitle').innerText = title;
+    document.getElementById('notifyLeaveId').value = leaveId;
+    document.getElementById('notifyTo').value = `Leave #${leaveId}`;
+
+    // show messages in the message textarea, then keep a reply area below
+    const history = (messages || []).map(m => {
+        const who = m.sender_role === 'admin' ? 'Admin' : (m.sender_id ? `User ${m.sender_id}` : 'User');
+        const time = new Date(m.created_at).toLocaleString();
+        return `${who} (${time}):\n${m.body}\n\n`;
+    }).join("\n------------------\n\n");
+
+    const msgEl = document.getElementById('notifyMessage');
+    msgEl.value = history + "\n\n--- Reply below ---\n";
+    document.getElementById('notifySubject').value = `Re: leave #${leaveId}`;
+    document.getElementById('notifyError').innerText = "";
+    notifyModal.show();
+
+    // Mark notifications read:
+    if (ROLE === "admin") {
+        // admin: mark server notifications for this leave as read
+        try {
+            const itemsRes = await fetch(`${API_BASE}/notifications`, { credentials: "same-origin" });
+            if (itemsRes.ok) {
+                const items = await itemsRes.json();
+                for (const i of items) {
+                    if (parseInt(i.leave_id) === parseInt(leaveId)) {
+                        await fetch(`${API_BASE}/notifications/${i.id}/mark_read`, {
+                            method: "POST",
+                            credentials: "same-origin"
+                        });
+                    }
+                }
+                fetchNotifications();
+            }
+        } catch(e){ console.error(e); }
+    } else {
+        // employee: update last-seen so admin messages not counted as unread
+        const lastSeenKey = `last_seen_msgs_user_${USER_ID || 'anon'}`;
+        localStorage.setItem(lastSeenKey, new Date().toISOString());
+        fetchNotifications();
+    }
+}
+
+/* Load message history for a leave */
+async function loadLeaveMessages(leaveId) {
+    try {
+        const res = await fetch(`${API_BASE}/${leaveId}/messages`, {
+            credentials: "same-origin"
+        });
+        if (!res.ok) {
+            console.warn("loadLeaveMessages failed", res.status);
+            return [];
+        }
+        return await res.json();
+    } catch(e){
+        console.error("loadLeaveMessages:", e);
+        return [];
+    }
 }
 
 /* ---------------- EMPLOYEE VIEW ---------------- */
@@ -223,28 +535,112 @@ function employeeView() {
     loadMyLeaves();
 }
 
+/* ---------------- DATE HELPERS & submitLeave ---------------- */
+
+// parse YYYY-MM-DD from input into a local Date at midnight
+function parseDateInput(value) {
+    if (!value) return null;
+    const parts = value.split('-');
+    if (parts.length !== 3) return null;
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    const d = parseInt(parts[2], 10);
+    if (isNaN(y)||isNaN(m)||isNaN(d)) return null;
+    return new Date(y, m-1, d, 0,0,0,0);
+}
+
+// parse server date string (YYYY-MM-DD or ISO) and return local Date at midnight
+function parseServerDate(value) {
+    if (!value) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return parseDateInput(value);
+    }
+    const tIndex = value.indexOf('T');
+    if (tIndex > 0) {
+        const datePart = value.slice(0, tIndex);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return parseDateInput(datePart);
+    }
+    const dt = new Date(value);
+    if (isNaN(dt)) return null;
+    return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 0,0,0,0);
+}
+
+// Modified submitLeave: validate dates and prevent applying for overlapping dates
 async function submitLeave(e) {
     e.preventDefault();
 
     const data = Object.fromEntries(new FormData(e.target));
     const msg = document.getElementById("msg");
+    msg.innerHTML = "";
 
-    const res = await fetch(API_BASE, {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-    });
+    const fromStr = (data.from_date || '').trim();
+    const toStr = (data.to_date || '').trim();
 
-    if (res.ok) {
-        msg.innerHTML = `<div class='text-success'>Leave Applied</div>`;
-        e.target.reset();
-        loadMyLeaves();
-    } else {
-        msg.innerHTML = `<div class='text-danger'>Failed</div>`;
+    if (!fromStr || !toStr) {
+        msg.innerHTML = `<div class='text-danger'>Both From and To dates are required.</div>`;
+        return;
+    }
+
+    const fromDate = parseDateInput(fromStr);
+    const toDate = parseDateInput(toStr);
+
+    if (!fromDate || !toDate) {
+        msg.innerHTML = `<div class='text-danger'>Invalid date(s) provided.</div>`;
+        return;
+    }
+
+    if (fromDate > toDate) {
+        msg.innerHTML = `<div class='text-danger'>"From" date cannot be after "To" date.</div>`;
+        return;
+    }
+
+    try {
+        // Fetch user's existing leaves and check for overlap with non-cancelled/non-rejected leaves
+        const existing = await fetchLeaves(true);
+
+        const blocking = existing.find(l => {
+            // ignore cancelled or rejected leaves
+            const status = (l.status || '').toLowerCase();
+            if (status === 'cancelled' || status === 'rejected') return false;
+
+            const lFrom = parseServerDate(l.from_date);
+            const lTo = parseServerDate(l.to_date);
+            if (!lFrom || !lTo) return false;
+
+            // inclusive overlap: newFrom <= existingTo && existingFrom <= newTo
+            return (fromDate <= lTo) && (lFrom <= toDate);
+        });
+
+        if (blocking) {
+            msg.innerHTML = `<div class='text-danger'>Cannot apply: dates overlap with existing leave #${blocking.id} (${fmtDate(blocking.from_date)} — ${fmtDate(blocking.to_date)}) with status ${blocking.status}.</div>`;
+            return;
+        }
+
+        // No overlap — proceed to submit
+        const res = await fetch(API_BASE, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+
+        if (res.ok) {
+            msg.innerHTML = `<div class='text-success'>Leave Applied</div>`;
+            e.target.reset();
+            loadMyLeaves();
+        } else {
+            let detail = '';
+            try { const json = await res.json(); detail = json && (json.detail || JSON.stringify(json)); } catch(e) { detail = await res.text(); }
+            msg.innerHTML = `<div class='text-danger'>Failed to apply: ${detail || res.statusText}</div>`;
+        }
+
+    } catch (err) {
+        console.error('submitLeave error:', err);
+        msg.innerHTML = `<div class='text-danger'>Network error applying leave.</div>`;
     }
 }
 
+/* loadMyLeaves and cancelMy (unchanged) */
 async function loadMyLeaves() {
     const tbody = document.querySelector("#myTable tbody");
     const data = await fetchLeaves(true);
@@ -265,26 +661,96 @@ async function loadMyLeaves() {
                 <td class="truncate">${l.reason || ""}</td>
                 <td>${badge(l.status)}</td>
                 <td>
-                    ${l.status === "Pending" ? `<button class="btn btn-sm btn-outline-danger" onclick="cancelMy(${l.id})">Cancel</button>` : ""}
+                    ${l.status === "Pending" ? `<button class="btn btn-sm btn-outline-danger me-2" onclick="cancelMy(${l.id})">Cancel</button>` : ""}
+                    <button class="btn btn-sm btn-primary" onclick="openNotifyModal(${l.id}, 'admin', '', '')">Message Admin</button>
                 </td>
             </tr>
         `;
     });
 }
 
-/* FIXED cancelMy() */
+/* cancelMy() */
 async function cancelMy(id) {
+    if (typeof id === "undefined" || id === null) {
+        alert("Invalid leave id");
+        return;
+    }
+
     if (!confirm("Cancel leave?")) return;
 
-    await fetch(`${API_BASE}/${id}/cancel`, {
-        method: "POST",
-        credentials: "same-origin"
-    });
+    try {
+        const res = await fetch(`${API_BASE}/${id}/cancel`, {
+            method: "POST",
+            credentials: "same-origin"
+        });
 
-    loadMyLeaves();
+        if (!res.ok) {
+            let detail = "";
+            try {
+                const json = await res.json();
+                detail = json && (json.detail || JSON.stringify(json));
+            } catch (e) {
+                detail = await res.text();
+            }
+            alert("Cancel failed: " + (detail || res.statusText));
+            return;
+        }
+
+        alert("Leave cancelled.");
+        try { loadMyLeaves(); } catch (e) { console.error("reload error:", e); location.reload(); }
+
+    } catch (err) {
+        console.error("Network error cancelling leave:", err);
+        alert("Network error cancelling leave: " + err);
+    }
 }
 
-/* ---------------- BOOT ---------------- */
+/* NOTIFY form submit (unchanged) */
+document.getElementById('notifyForm').onsubmit = async function(e) {
+    e.preventDefault();
+    const id = document.getElementById('notifyLeaveId').value;
+    const subject = document.getElementById('notifySubject').value.trim();
+    let messageText = document.getElementById('notifyMessage').value.trim();
+
+    if (!subject || !messageText) {
+        document.getElementById('notifyError').innerText = "Subject and message are required.";
+        return;
+    }
+
+    if (messageText.indexOf('--- Reply below ---') !== -1) {
+        messageText = messageText.split('--- Reply below ---').pop().trim();
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/${id}/notify`, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ subject, message: messageText })
+        });
+
+        if (!res.ok) {
+            let text;
+            try { text = (await res.json()).detail || JSON.stringify(await res.json()); } catch(e) { text = await res.text(); }
+            document.getElementById('notifyError').innerText = "Error: " + text;
+            return;
+        }
+
+        alert("Message sent successfully.");
+        notifyModal.hide();
+
+        if (ROLE !== "admin") {
+            const lastSeenKey = `last_seen_msgs_user_${USER_ID || 'anon'}`;
+            localStorage.setItem(lastSeenKey, new Date().toISOString());
+        }
+        fetchNotifications();
+    } catch (err) {
+        document.getElementById('notifyError').innerText = "Network error sending message.";
+        console.error(err);
+    }
+};
+
+/* BOOT */
 renderNav();
 ROLE === "admin" ? adminView() : employeeView();
 

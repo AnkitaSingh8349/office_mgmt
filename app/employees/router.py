@@ -8,6 +8,42 @@ from app.database import get_db
 from app.employees.models import Employee
 from app.auth.dependencies import get_current_user, require_role
 
+# app/employees/router.py (top portion)
+from fastapi import APIRouter, Depends, HTTPException
+from typing import List, Dict, Any
+from sqlmodel import Session, select
+from sqlalchemy import func        # <- for debug count
+from datetime import date, datetime
+import traceback
+
+from app.database import engine
+from app.employees.models import Employee
+
+# remove internal prefix here
+router = APIRouter(tags=["employees_api"])
+
+
+
+# Ensure get_session is defined BEFORE routes that depend on it
+def get_session():
+    with Session(engine) as s:
+        yield s
+
+# ... existing helpers (_iso_safe, _serialize_short, etc.) ...
+
+# Now safe to add debug endpoint that uses get_session
+@router.get("/_debug_count", name="employees_debug_count")
+def debug_count(session: Session = Depends(get_session)):
+    try:
+        cnt = session.exec(select(func.count()).select_from(Employee)).one()
+        return {"count": cnt}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+# your all_employees and other routes follow...
+
+
 router = APIRouter(prefix="/employees", tags=["employees"])
 templates = Jinja2Templates(directory="app/templates")
 
@@ -127,3 +163,6 @@ def employee_admin_summary(db: Session = Depends(get_db), _ = Depends(require_ro
     except Exception:
         total = 0
     return {"total": total}
+
+
+    

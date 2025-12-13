@@ -1,275 +1,947 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8" />
-    <title>Employee Dashboard</title>
-
-    <style>
-        :root{
-            --bg: #f5f6fa;
-            --card-bg: #ffffff;
-            --muted: #777;
-            --accent: #6c5ce7; /* purple accent for employee */
-            --accent-hex: #6c5ce7;
-            --border: #e8e8f0;
-            --btn-bg: #6c5ce7;
-            --btn-text: #fff;
-        }
-
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: var(--bg);
-            color: #222;
-        }
-
-        /* ✅ NEW — Make all links green on hover */
-        a:hover {
-            color: green !important;
-        }
-
-        /* Header */
-        header {
-            background: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #ddd;
-            position: sticky;
-            top: 0;
-            z-index: 5;
-        }
-        header h2 {
-            margin: 0;
-            color: #333;
-            font-size: 24px;
-        }
-        header p {
-            margin: 3px 0 0;
-            color: #555;
-            font-size: 14px;
-        }
-        .logout-btn {
-            padding: 8px 14px;
-            background: #ff4d4d;
-            color: white;
-            border-radius: 6px;
-            text-decoration: none;
-            transition: 0.3s;
-            border: none;
-            cursor: pointer;
-            font-weight: 700;
-        }
-        .logout-btn:hover {
-            background: #ff1a1a;
-        }
-
-        /* Dashboard container */
-        .container {
-            padding: 25px;
-            max-width: 1200px;
-            margin: auto;
-        }
-
-        .section-title {
-            font-size: 22px;
-            margin-bottom: 10px;
-            color: #222;
-        }
-
-        /* Links Section */
-        .link-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .link-card {
-            background: linear-gradient(180deg, rgba(108,92,231,0.08), rgba(108,92,231,0.03));
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            text-align: center;
-            font-size: 18px;
-            cursor: pointer;
-            transition: 0.25s;
-            box-shadow: 0 2px 8px rgba(108,92,231,0.04);
-        }
-        .link-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 20px rgba(108,92,231,0.08);
-            border-color: rgba(108,92,231,0.15);
-        }
-        .link-card a {
-            text-decoration: none;
-            color: var(--accent);
-            font-weight: 700;
-            display: block;
-        }
-        .link-card .hint {
-            display:block;
-            margin-top:8px;
-            color: var(--muted);
-            font-weight:500;
-            font-size:13px;
-        }
-
-        /* Summary Cards */
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 10px;
-        }
-        .summary-card {
-            background: var(--card-bg);
-            padding: 18px;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            text-align: center;
-        }
-        .summary-card strong {
-            font-size: 18px;
-            display: block;
-            margin-bottom: 6px;
-            color: #444;
-        }
-        .summary-card div {
-            font-size: 15px;
-            color: var(--muted);
-        }
-
-        /* Quick Action bar */
-        .actions {
-            margin: 20px 0 10px;
-            display:flex;
-            gap:12px;
-            flex-wrap:wrap;
-        }
-        .btn {
-            padding:10px 14px;
-            border-radius:8px;
-            text-decoration:none;
-            font-weight:700;
-            border: none;
-            cursor:pointer;
-            display:inline-flex;
-            align-items:center;
-            gap:8px;
-        }
-        .btn-primary {
-            background: var(--btn-bg);
-            color: var(--btn-text);
-            box-shadow: 0 6px 18px rgba(108,92,231,0.12);
-        }
-        .btn-outline {
-            background: transparent;
-            border:1px solid var(--accent);
-            color: var(--accent);
-        }
-
-        .small {
-            font-size:13px;
-            color:var(--muted);
-        }
-
-        /* Responsive Tweaks */
-        @media (max-width: 768px) {
-            header h2 { font-size: 20px; }
-            .section-title { font-size: 20px; }
-            .link-card { padding: 16px; }
-        }
-    </style>
+<meta charset="utf-8" />
+<title>Employee Dashboard</title>
+<style>
+:root{
+    --bg: #f5f6fa;
+    --card-bg: #ffffff;
+    --muted: #777;
+    --accent: #6c5ce7;
+    --accent-hex: #6c5ce7;
+    --border: #e8e8f0;
+    --btn-bg: #6c5ce7;
+    --btn-text: #fff;
+}
+body { margin: 0; font-family: Arial, sans-serif; background: var(--bg); color: #222; }
+a:hover { color: green !important; }
+header { background: white; padding: 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; position:sticky; top:0; z-index:5; }
+header h2 { margin:0; color:#333; font-size:24px; }
+header p { margin:3px 0 0; color:#555; font-size:14px; }
+.logout-btn { padding:8px 14px; background:#ff4d4d; color:white; border-radius:6px; border:none; cursor:pointer; font-weight:700; }
+.logout-btn:hover { background:#ff1a1a; }
+.container { padding:25px; max-width:1200px; margin:auto; }
+.section-title { font-size:22px; margin-bottom:10px; color:#222; }
+.link-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:20px; margin-bottom:30px; }
+.link-card { background:linear-gradient(180deg, rgba(108,92,231,0.08), rgba(108,92,231,0.03)); padding:20px; border-radius:12px; border:1px solid var(--border); text-align:center; font-size:18px; cursor:pointer; transition:0.25s; box-shadow:0 2px 8px rgba(108,92,231,0.04); }
+.link-card:hover { transform: translateY(-4px); box-shadow:0 8px 20px rgba(108,92,231,0.08); border-color:rgba(108,92,231,0.15); }
+.link-card a { text-decoration:none; color:var(--accent); font-weight:700; display:block; }
+.link-card .hint { display:block; margin-top:8px; color: var(--muted); font-weight:500; font-size:13px; }
+.summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:15px; margin-top:10px; }
+.summary-card { background:var(--card-bg); padding:18px; border-radius:10px; border:1px solid var(--border); text-align:center; }
+.summary-card strong { font-size:18px; display:block; margin-bottom:6px; color:#444; }
+.summary-card div { font-size:15px; color:var(--muted); }
+.actions { margin:20px 0 10px; display:flex; gap:12px; flex-wrap:wrap; }
+.btn { padding:10px 14px; border-radius:8px; text-decoration:none; font-weight:700; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+.btn-primary { background:var(--btn-bg); color:var(--btn-text); box-shadow:0 6px 18px rgba(108,92,231,0.12); }
+.btn-outline { background:transparent; border:1px solid var(--accent); color:var(--accent); }
+.small { font-size:13px; color:var(--muted); }
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; align-items:flex-start; padding-top:32px; overflow-y:auto; }
+.modal { width:95%; max-width:1080px; margin:0 auto 40px; background:white; border-radius:12px; padding:20px 22px; box-shadow:0 18px 60px rgba(0,0,0,0.25); }
+.tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.tabBtn { padding:8px 12px; margin-right:6px; cursor:pointer; border-radius:6px; border:1px solid #ddd; background:#f2f2f2; }
+.tabBtn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.formTab { display:none; }
+.formRow { display:flex; gap:12px; }
+.field { width:100%; margin-top:8px; }
+label { display:block; font-weight:600; margin-bottom:6px; }
+input[type="text"], input[type="email"], input[type="date"], textarea { width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; box-sizing:border-box; }
+textarea { min-height:80px; resize:vertical; }
+.section-actions { text-align:right; margin-top:14px; }
+.saveBtn { background:var(--btn-bg); color:var(--btn-text); padding:8px 12px; border-radius:6px; border:none; cursor:pointer; }
+.closeBtn { background:transparent; border:1px solid #ddd; padding:8px 12px; border-radius:6px; cursor:pointer; margin-left:8px; }
+@media (max-width:640px) { .formRow { flex-direction:column; } }
+.modal-loading { padding: 18px; text-align:center; color:var(--muted); font-size:15px; }
+</style>
 </head>
-
 <body>
-
 <header>
-    <div>
-      <h2>Welcome, {{ name }} 👋</h2>
+<div>
+<h2>Welcome, {{ name }} 👋</h2>
 
-        <p>You are logged in as <strong style="color:var(--accent)">Employee</strong>.</p>
-    </div>
-    <div style="display:flex; gap:10px; align-items:center;">
-        <a href="/profile" class="btn btn-outline" style="padding:8px 12px; border-radius:6px;">Profile</a>
+<button id="profileBtn" class="btn btn-outline" style="margin-left:8px; padding:8px 12px; border-radius:6px;">Profile</button>
 
-        <form action="/auth/logout" method="post" style="display:inline; margin:0;">
-            <button type="submit" class="logout-btn">Logout</button>
-        </form>
-    </div>
+</div>
+<div class="mt-3">
+<small>Profile completion: <span id="dashPercent">0%</span></small>
+<div class="progress" style="height:14px;">
+<div id="dashBar" class="progress-bar" role="progressbar" style="width:0%">0%</div>
+</div>
+</div>
+<p>You are logged in as <strong style="color:var(--accent)">Employee</strong>.</p>
+<div style="display:flex; gap:10px; align-items:center;">
+
+<form action="/auth/logout" method="post" style="display:inline; margin:0;">
+<button type="submit" class="logout-btn">Logout</button>
+</form>
+</div>
 </header>
 
 <div class="container">
+<h3 class="section-title">Employee Dashboard</h3>
+<p style="margin-bottom: 12px; color:#555;">Quick access — mark tasks, apply leaves and check salary slips.</p>
 
-    <h3 class="section-title">Employee Dashboard</h3>
-    <p style="margin-bottom: 12px; color:#555;">Quick access — mark tasks, apply leaves and check salary slips.</p>
+<div class="actions">
+<a href="/tasks/mark" class="btn btn-primary">✔️ Mark Tasks</a>
+<a href="/leaves/apply" class="btn btn-outline">📝 Apply for Leave</a>
+<a href="/attendance" class="btn btn-outline">⏰ Attendance</a>
+<a href="/salary/me" class="btn btn-outline">💳 Salary Slips</a>
+</div>
 
-    <div class="actions">
-        <a href="/tasks/mark" class="btn btn-primary">✔️ Mark Tasks</a>
-        <a href="/leaves/apply" class="btn btn-outline">📝 Apply for Leave</a>
-        <a href="/attendance" class="btn btn-outline">⏰ Attendance</a>
-       <a href="/salary/me" class="btn btn-outline">💳 Salary Slips</a>
+<div class="link-grid">
+<div class="link-card">
+<a href="/tasks">📌 My Tasks</a>
+<span class="hint">Mark complete / update progress</span>
+</div>
+<div class="link-card">
+<a href="/leaves/ui/my?auto_open=1" class="card">Apply for Leave</a>
+<span class="hint">Submit new leave request</span>
+</div>
+<div class="link-card">
+<a href="/attendance">⏱️ Attendance</a>
+<span class="hint">Check punch-in / out</span>
+</div>
+<div class="link-card">
+<a href="/salary/slips">💰 Salary Slips</a>
+<span class="hint">View & download PDFs</span>
+</div>
+</div>
 
-    </div>
+<h4 class="section-title">Summary</h4>
+<div class="summary-grid">
+<div class="summary-card">
+<strong>Open Tasks</strong>
+<div class="small">—</div>
+</div>
+<div class="summary-card">
+<strong>Pending Leave Requests</strong>
+<div class="small">—</div>
+</div>
+<div class="summary-card">
+<strong>Latest Salary</strong>
+<div class="small">—</div>
+</div>
+</div>
 
-    <div class="link-grid">
-        <div class="link-card">
-            <a href="/tasks">📌 My Tasks</a>
-            <span class="hint">Mark complete / update progress</span>
-        </div>
-
-        <div class="link-card">
-            <!-- updated to use the ui alias route you added -->
-            <a href="/leaves/ui/my?auto_open=1" class="card">Apply for Leave</a>
-            <span class="hint">Submit new leave request</span>
-        </div>
-
-        <div class="link-card">
-            <a href="/attendance">⏱️ Attendance</a>
-            <span class="hint">Check punch-in / out</span>
-        </div>
-
-        <div class="link-card">
-            <a href="/salary/slips">💰 Salary Slips</a>
-            <span class="hint">View & download PDFs</span>
-        </div>
-    </div>
-
-    <h4 class="section-title">Summary</h4>
-
-    <div class="summary-grid">
-        <div class="summary-card">
-            <strong>Open Tasks</strong>
-            <div class="small">—</div>
-        </div>
-        <div class="summary-card">
-            <strong>Pending Leave Requests</strong>
-            <div class="small">—</div>
-        </div>
-        <div class="summary-card">
-            <strong>Latest Salary</strong>
-            <div class="small">—</div>
-        </div>
-    </div>
-
-    <h4 class="section-title" style="margin-top:22px;">Recent Activity</h4>
-    <div class="summary-grid" style="grid-template-columns: 1fr;">
-        <div class="summary-card" style="text-align:left;">
-            <strong>Activity Feed</strong>
-            <div class="small" style="margin-top:10px;">No recent activity found.</div>
-        </div>
-    </div>
+<h4 class="section-title" style="margin-top:22px;">Recent Activity</h4>
+<div class="summary-grid" style="grid-template-columns: 1fr;">
+<div class="summary-card" style="text-align:left;">
+<strong>Activity Feed</strong>
+<div class="small" style="margin-top:10px;">No recent activity found.</div>
+</div>
+</div>
 
 </div>
 
-<!--
-Note:
- - This template links to /leaves/ui/my?auto_open=1
- - Make sure in your main app you mounted the dashboard router with:
-     app.include_router(dashboard_router, prefix="/leaves")
-   so the final URL becomes: /leaves/ui/my
--->
+<!-- ================= PROFILE MODAL ================= -->
+<div id="profileModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px;">
+<h2 id="profileTitle">Employee Profile</h2>
+<div>
+<button id="closeTopBtn" class="closeBtn">Close</button>
+</div>
+</div>
+
+<div id="modalBodyInner">
+    <div id="modalLoading" class="modal-loading">Loading profile…</div>
+
+    <div id="modalContent" style="display:none;">
+        <div class="tabs" role="tablist">
+            <button class="tabBtn active" data-tab="basic" role="tab">Basic Info</button>
+            <button class="tabBtn" data-tab="personal" role="tab">Personal</button>
+            <button class="tabBtn" data-tab="identity" role="tab">Identity</button>
+            <button class="tabBtn" data-tab="contact" role="tab">Contact</button>
+            <button class="tabBtn" data-tab="payment" role="tab">Payment</button>
+        </div>
+
+        <!-- Basic -->
+        <form id="form_basic" class="formTab" style="display:block;">
+        <h3>Basic Information</h3>
+        <div class="formRow">
+        <div class="field"><label for="first_name">First Name</label><input id="first_name" type="text" /></div>
+        <div class="field"><label for="last_name">Last Name</label><input id="last_name" type="text" /></div>
+        </div>
+        <div class="formRow" style="margin-top:8px;">
+        <div class="field"><label for="personal_phone">Personal Phone</label><input id="personal_phone" type="text" /></div>
+        <div class="field"><label for="birthday">Birthday</label><input id="birthday" type="date" /></div>
+        </div>
+        <label for="present_address" style="margin-top:8px;">Present Address</label>
+        <textarea id="present_address"></textarea>
+
+        <label for="permanent_address" style="margin-top:8px;">Permanent Address</label>
+        <textarea id="permanent_address"></textarea>
+
+        <div class="section-actions">
+        <button type="button" class="saveBtn" data-section="basic">Save Basic</button>
+        </div>
+        </form>
+
+        <!-- Personal -->
+        <form id="form_personal" class="formTab" style="display:none;">
+        <h3>Personal Details</h3>
+        <div class="formRow">
+        <div class="field"><label for="gender">Gender</label><input id="gender" type="text" /></div>
+        <div class="field"><label for="marital_status">Marital Status</label><input id="marital_status" type="text" /></div>
+        </div>
+        <div class="formRow" style="margin-top:8px;">
+        <div class="field"><label for="father_name">Father's Name</label><input id="father_name" type="text" /></div>
+        <div class="field"><label for="linkedin_url">LinkedIn URL</label><input id="linkedin_url" type="text" /></div>
+        </div>
+        <div class="section-actions">
+        <button type="button" class="saveBtn" data-section="personal">Save Personal</button>
+        </div>
+        </form>
+
+        <!-- Identity -->
+        <form id="form_identity" class="formTab" style="display:none;">
+        <h3>Identity Information</h3>
+        <div class="formRow">
+        <div class="field"><label for="uan">UAN</label><input id="uan" type="text" /></div>
+        <div class="field"><label for="pan">PAN</label><input id="pan" type="text" /></div>
+        </div>
+        <label for="aadhar" style="margin-top:8px;">Aadhaar</label>
+        <input id="aadhar" type="text" />
+
+        <div class="section-actions">
+        <button type="button" class="saveBtn" data-section="identity">Save Identity</button>
+        </div>
+        </form>
+
+        <!-- Contact -->
+        <form id="form_contact" class="formTab" style="display:none;">
+        <h3>Contact Details</h3>
+        <div class="formRow">
+        <div class="field"><label for="personal_email">Personal Email</label><input id="personal_email" type="email" /></div>
+        <div class="field"><label for="personal_mobile">Personal Mobile</label><input id="personal_mobile" type="text" /></div>
+        </div>
+
+        <label for="seating_location" style="margin-top:8px;">Seating Location</label>
+        <input id="seating_location" type="text" />
+
+        <div class="section-actions">
+        <button type="button" class="saveBtn" data-section="contact">Save Contact</button>
+        </div>
+        </form>
+
+        <!-- Payment -->
+        <form id="form_payment" class="formTab" style="display:none;">
+        <h3>Payment Information</h3>
+        <div class="formRow">
+        <div class="field"><label for="bank_account_no">Bank Account Number</label><input id="bank_account_no" type="text" /></div>
+        <div class="field"><label for="bank_name">Bank Name</label><input id="bank_name" type="text" /></div>
+        </div>
+
+        <div class="formRow" style="margin-top:8px;">
+        <div class="field"><label for="ifsc_code">IFSC Code</label><input id="ifsc_code" type="text" /></div>
+        <div class="field"><label for="account_type">Account Type</label><input id="account_type" type="text" /></div>
+        </div>
+
+        <div class="formRow" style="margin-top:8px;">
+        <div class="field"><label for="payment_mode">Payment Mode</label><input id="payment_mode" type="text" /></div>
+        </div>
+
+        <div class="section-actions">
+        <button type="button" class="saveBtn" data-section="payment">Save Payment</button>
+        </div>
+        </form>
+    </div>
+</div>
+
+</div>
+</div>
+
+<script>
+(function(){
+const overlay = document.getElementById('profileModalOverlay');
+const profileBtn = document.getElementById('profileBtn');
+const closeTopBtn = document.getElementById('closeTopBtn');
+const tabBtns = document.querySelectorAll('.tabBtn');
+const formTabs = document.querySelectorAll('.formTab');
+const saveBtns = document.querySelectorAll('.saveBtn');
+const modalLoading = document.getElementById('modalLoading');
+const modalContent = document.getElementById('modalContent');
+
+window.profileData = null;
+let adminViewingOther = false; // when admin opens some other employee
+
+function zeroPad(n){ return String(n).padStart(2,'0'); }
+
+function normalizeDateForInput(val) {
+    if (!val) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)) {
+        const parts = val.split('/');
+        let day = parts[0], month = parts[1], year = parts[2];
+        return `${year}-${zeroPad(month)}-${zeroPad(day)}`;
+    }
+    const m = (''+val).match(/^(\d{4}-\d{2}-\d{2})/);
+    if (m) return m[1];
+    return val;
+}
+function showModalSkeletonLoading() {
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'flex-start';
+    modalLoading.style.display = 'block';
+    modalContent.style.display = 'none';
+    const modalEl = overlay.querySelector('.modal');
+    if (modalEl) {
+        modalEl.style.display = 'block';
+        modalEl.style.visibility = 'visible';
+    }
+}
+
+function showModalContent() {
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'flex-start';
+    modalLoading.style.display = 'none';
+    modalContent.style.display = 'block';
+    const modalEl = overlay.querySelector('.modal');
+    if (modalEl) {
+        modalEl.style.display = 'block';
+        modalEl.style.visibility = 'visible';
+        modalEl.scrollTop = 0;
+    }
+}
+
+profileBtn.addEventListener('click', async () => {
+    adminViewingOther = false;
+    showModalSkeletonLoading();
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    openTab('basic');
+    await loadMyProfile();
+});
+
+closeTopBtn.addEventListener('click', closeModal);
+overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+function closeModal() { overlay.style.display = 'none'; document.body.style.overflow = ''; }
+
+function openTab(name) {
+    formTabs.forEach(f => f.style.display = 'none');
+    const el = document.getElementById('form_' + name);
+    if (el) el.style.display = 'block';
+    tabBtns.forEach(b => b.classList.remove('active'));
+    const btn = document.querySelector(`.tabBtn[data-tab="${name}"]`);
+    if (btn) btn.classList.add('active');
+    const modalEl = document.querySelector('.modal');
+    if (modalEl) modalEl.scrollTop = 0;
+}
+tabBtns.forEach(b => b.addEventListener('click', () => openTab(b.dataset.tab)));
+
+async function safeParseResponseText(res) {
+    const text = await res.text();
+    if (!text) return null;
+    const t = text.trim();
+    if (t === '' || t.toLowerCase() === 'null') return null;
+    try { return JSON.parse(t); } catch(e) { console.warn('Could not parse JSON from response text:', t); return null; }
+}
+
+// -----------------------------
+// populateAll (single robust implementation)
+// -----------------------------
+function populateAll(profile) {
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val ?? "";
+    };
+
+    if (!profile) {
+        [
+            'first_name','last_name','personal_phone','birthday','present_address','permanent_address',
+            'gender','marital_status','father_name','linkedin_url',
+            'uan','pan','aadhar',
+            'personal_email','personal_mobile','seating_location',
+            'bank_account_no','bank_name','ifsc_code','account_type','payment_mode'
+        ].forEach(id => set(id, ""));
+        return;
+    }
+
+    const b = profile.basic || {};
+    const p = profile.personal || {};
+    const idt = profile.identity || {};
+    const c = profile.contact || {};
+    const pay = profile.payment || {};
+    const top = profile;
+
+    const pick = (...keys) => {
+        for (const k of keys) {
+            if (b[k] !== undefined) return b[k];
+            if (p[k] !== undefined) return p[k];
+            if (idt[k] !== undefined) return idt[k];
+            if (c[k] !== undefined) return c[k];
+            if (pay[k] !== undefined) return pay[k];
+            if (top[k] !== undefined) return top[k];
+        }
+        return "";
+    };
+
+    // ---- FIX NAME SHOWING BLANK ----
+    let fullName = pick("name", "full_name", "basic_name", "basic.full_name", "firstname", "first_name");
+    let first = "", last = "";
+
+    if (fullName && String(fullName).includes(" ")) {
+        const parts = fullName.split(" ");
+        first = parts.shift();
+        last = parts.join(" ");
+    } else {
+        first = pick("first_name", "firstname", "given_name", "name");
+        last = pick("last_name", "lastname", "family_name");
+    }
+
+    set("first_name", first);
+    set("last_name", last);
+
+    set("personal_phone", pick("personal_phone", "mobile", "phone"));
+    set("birthday", pick("birthday", "dob"));
+
+    set("present_address", pick("present_address", "address"));
+    set("permanent_address", pick("permanent_address"));
+
+    set("gender", pick("gender"));
+    set("marital_status", pick("marital_status"));
+    set("father_name", pick("father_name"));
+    set("linkedin_url", pick("linkedin_url", "linkedin"));
+
+    set("uan", pick("uan"));
+    set("pan", pick("pan", "PAN"));
+    set("aadhar", pick("aadhar", "aadhaar"));
+
+    set("personal_email", pick("personal_email", "email"));
+    set("personal_mobile", pick("personal_mobile", "mobile"));
+    set("seating_location", pick("seating_location"));
+
+    set("bank_account_no", pick("bank_account_no", "account_no"));
+    set("bank_name", pick("bank_name", "bank"));
+    set("ifsc_code", pick("ifsc_code", "ifsc"));
+    set("account_type", pick("account_type"));
+    set("payment_mode", pick("payment_mode"));
+}
+
+// -----------------------------
+// merge helper that persists backup
+// -----------------------------
+function mergePayloadIntoProfileData(payload) {
+    if (!window.profileData) {
+        try {
+            const raw = localStorage.getItem('profileBackup');
+            if (raw) window.profileData = JSON.parse(raw);
+        } catch(_) { window.profileData = {}; }
+        if (!window.profileData) window.profileData = {};
+    }
+    Object.keys(payload).forEach(section => {
+        if (!window.profileData[section]) window.profileData[section] = {};
+        Object.keys(payload[section]).forEach(k => {
+            window.profileData[section][k] = payload[section][k];
+        });
+    });
+    if (window.profileData.basic && window.profileData.basic.birthday) {
+        window.profileData.basic.birthday = normalizeDateForInput(window.profileData.basic.birthday);
+    }
+    try { localStorage.setItem('profileBackup', JSON.stringify(window.profileData)); } catch(_) {}
+}
+
+// -----------------------------
+// loadMyProfile with fallbacks & normalization
+// -----------------------------
+async function loadMyProfile() {
+    try {
+        showModalSkeletonLoading();
+      const r = await fetch('/api/profile/profile/me', {
+  credentials: 'include',
+  cache: 'no-store'
+});
+        const rawText = await r.text();
+        let json = null;
+        try { json = rawText ? JSON.parse(rawText) : null; } catch(e) { console.warn('GET parse failed', e); }
+
+        if (!r.ok) {
+            if (window.profileData) populateAll(window.profileData);
+            else {
+                try {
+                    const raw = localStorage.getItem('profileBackup');
+                    if (raw) { window.profileData = JSON.parse(raw); populateAll(window.profileData); }
+                    else populateAll(null);
+                } catch(e) { populateAll(null); }
+            }
+            setReadOnly(false);
+            showModalContent();
+            return false;
+        }
+
+        let pd = (json && (json.profile || json)) || null;
+
+        if (!pd) {
+            if (window.profileData) { populateAll(window.profileData); setReadOnly(false); showModalContent(); return true; }
+            try {
+                const raw = localStorage.getItem('profileBackup');
+                if (raw) { window.profileData = JSON.parse(raw); populateAll(window.profileData); setReadOnly(false); showModalContent(); return true; }
+            } catch(e) {}
+            populateAll(null);
+            setReadOnly(false);
+            showModalContent();
+            return false;
+        }
+
+        // normalize flat -> grouped
+        const flatKeysToDetect = [
+            'first_name','last_name','personal_phone','birthday','present_address','permanent_address',
+            'gender','marital_status','father_name','linkedin_url',
+            'uan','pan','aadhar','aadhaar',
+            'personal_email','personal_mobile','seating_location',
+            'bank_account_no','bank_name','ifsc_code','account_type','payment_mode'
+        ];
+
+        if (pd && !pd.basic && Object.keys(pd).some(k => flatKeysToDetect.includes(k))) {
+            const flat = pd;
+            pd = {
+                basic: {
+                    first_name: flat.first_name || flat.firstname || flat.given_name || '',
+                    last_name: flat.last_name || flat.lastname || '',
+                    personal_phone: flat.personal_phone || flat.mobile || flat.phone || '',
+                    birthday: flat.birthday || flat.dob || ''
+                },
+                personal: {
+                    gender: flat.gender || '',
+                    marital_status: flat.marital_status || '',
+                    father_name: flat.father_name || '',
+                    linkedin_url: flat.linkedin_url || flat.linkedin || ''
+                },
+                identity: {
+                    uan: flat.uan || '',
+                    pan: flat.pan || '',
+                    aadhar: flat.aadhar || flat.aadhaar || flat.aadhar_no || ''
+                },
+                contact: {
+                    personal_email: flat.personal_email || flat.email || '',
+                    personal_mobile: flat.personal_mobile || flat.mobile || '',
+                    seating_location: flat.seating_location || ''
+                },
+                payment: {
+                    bank_account_no: flat.bank_account_no || flat.account_no || flat.bank_account || '',
+                    bank_name: flat.bank_name || flat.bank || '',
+                    ifsc_code: flat.ifsc_code || flat.ifsc || '',
+                    account_type: flat.account_type || '',
+                    payment_mode: flat.payment_mode || ''
+                }
+            };
+        } else {
+            pd.basic = pd.basic || {
+                first_name: pd.first_name || pd.firstname || '',
+                last_name: pd.last_name || pd.lastname || '',
+                personal_phone: pd.personal_phone || pd.mobile || '',
+                birthday: pd.birthday || pd.dob || ''
+            };
+            pd.identity = pd.identity || { aadhar: pd.aadhar || pd.aadhaar || '' , pan: pd.pan || '', uan: pd.uan || '' };
+            pd.contact = pd.contact || { personal_email: pd.personal_email || pd.email || '', personal_mobile: pd.personal_mobile || '' , seating_location: pd.seating_location || '' };
+            pd.payment = pd.payment || { bank_account_no: pd.bank_account_no || '', bank_name: pd.bank_name || '', ifsc_code: pd.ifsc_code || pd.ifsc || '' , account_type: pd.account_type || '', payment_mode: pd.payment_mode || '' };
+        }
+
+        if (pd.basic && pd.basic.birthday) pd.basic.birthday = normalizeDateForInput(pd.basic.birthday);
+
+        window.profileData = pd;
+        try { localStorage.setItem('profileBackup', JSON.stringify(window.profileData)); } catch(_) {}
+        populateAll(window.profileData);
+        setReadOnly(false);
+        showModalContent();
+        return true;
+    } catch (e) {
+        try {
+            const raw = localStorage.getItem('profileBackup');
+            if (raw) { window.profileData = JSON.parse(raw); populateAll(window.profileData); }
+            else populateAll(null);
+        } catch(_) { populateAll(null); }
+        setReadOnly(false);
+        showModalContent();
+        return false;
+    }
+}
+
+// -----------------------------
+// Save section (merge returned partial profile instead of replacing)
+// -----------------------------
+async function saveSection(section) {
+    if (adminViewingOther) { alert('Admin view is read-only.'); return; }
+
+    const makeNonEmpty = (obj) => {
+        const out = {};
+        for (const k in obj) {
+            const v = obj[k];
+            if (v !== null && v !== undefined && String(v).trim() !== '') out[k] = v;
+        }
+        return out;
+    };
+
+    let payload = {};
+
+    if (section === 'basic') {
+        payload.basic = makeNonEmpty({
+            first_name: document.getElementById('first_name').value,
+            last_name: document.getElementById('last_name').value,
+            personal_phone: document.getElementById('personal_phone').value,
+            birthday: document.getElementById('birthday').value,
+            present_address: document.getElementById('present_address').value,
+            permanent_address: document.getElementById('permanent_address').value
+        });
+    } else if (section === 'personal') {
+        payload.personal = makeNonEmpty({
+            gender: document.getElementById('gender').value,
+            marital_status: document.getElementById('marital_status').value,
+            father_name: document.getElementById('father_name').value,
+            linkedin_url: document.getElementById('linkedin_url').value
+        });
+    } else if (section === 'identity') {
+        payload.identity = makeNonEmpty({
+            uan: document.getElementById('uan').value,
+            pan: document.getElementById('pan').value,
+            aadhar: document.getElementById('aadhar').value
+        });
+    } else if (section === 'contact') {
+        payload.contact = makeNonEmpty({
+            personal_email: document.getElementById('personal_email').value,
+            personal_mobile: document.getElementById('personal_mobile').value,
+            seating_location: document.getElementById('seating_location').value
+        });
+    } else if (section === 'payment') {
+        payload.payment = makeNonEmpty({
+            bank_account_no: document.getElementById('bank_account_no').value,
+            bank_name: document.getElementById('bank_name').value,
+            ifsc_code: document.getElementById('ifsc_code').value,
+            account_type: document.getElementById('account_type').value,
+            payment_mode: document.getElementById('payment_mode').value
+        });
+    } else {
+        console.warn('Unknown section', section);
+        return;
+    }
+
+    const sectionKeys = Object.keys(payload[section] || {});
+    if (sectionKeys.length === 0) { alert('Please fill at least one field to save.'); return; }
+
+    try {
+        document.querySelectorAll('.saveBtn').forEach(b => { b.disabled = true; });
+
+       const res = await fetch('/api/profile/profile/me', 
+ {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload)
+        });
+
+        const rawText = await res.text();
+        let json = null;
+        try { json = rawText ? JSON.parse(rawText) : null; } catch(e) { console.warn('PUT parse failed', e); }
+
+        if (!res.ok) {
+            const detail = (json && (json.detail || json.message)) || res.statusText;
+            alert('Save failed: ' + detail);
+            return;
+        }
+
+        // No-body (204/202) or non-JSON -> merge what we sent
+        if (res.status === 204 || res.status === 202 || !res.headers.get('content-type') || !json) {
+            mergePayloadIntoProfileData(payload);
+            populateAll(window.profileData);
+            showModalContent();
+            alert('Saved ' + section);
+            return;
+        }
+
+        // If server returned something: normalize & merge into existing profileData
+        const returnedProfile = (json && (json.profile || json)) || null;
+        if (returnedProfile) {
+            let pd = returnedProfile;
+            const flatKeysToDetect = [
+                'first_name','last_name','personal_phone','birthday','present_address','permanent_address',
+                'gender','marital_status','father_name','linkedin_url',
+                'uan','pan','aadhar','aadhaar',
+                'personal_email','personal_mobile','seating_location',
+                'bank_account_no','bank_name','ifsc_code','account_type','payment_mode'
+            ];
+            if (pd && !pd.basic && Object.keys(pd).some(k => flatKeysToDetect.includes(k))) {
+                const flat = pd;
+                pd = {
+                    basic: { first_name: flat.first_name || '', last_name: flat.last_name || '', personal_phone: flat.personal_phone || '', birthday: flat.birthday || '' },
+                    personal: { gender: flat.gender || '', marital_status: flat.marital_status || '', father_name: flat.father_name || '' },
+                    identity: { uan: flat.uan || '', pan: flat.pan || '', aadhar: flat.aadhar || flat.aadhaar || '' },
+                    contact: { personal_email: flat.personal_email || flat.email || '', personal_mobile: flat.personal_mobile || '' },
+                    payment: { bank_account_no: flat.bank_account_no || '', bank_name: flat.bank_name || '', ifsc_code: flat.ifsc_code || flat.ifsc || '' }
+                };
+            } else {
+                pd.basic = pd.basic || {
+                    first_name: pd.first_name || pd.firstname || '',
+                    last_name: pd.last_name || pd.lastname || '',
+                    personal_phone: pd.personal_phone || pd.mobile || '',
+                    birthday: pd.birthday || pd.dob || ''
+                };
+                pd.personal = pd.personal || { gender: pd.gender || '', marital_status: pd.marital_status || '', father_name: pd.father_name || '', linkedin_url: pd.linkedin_url || '' };
+                pd.identity = pd.identity || { aadhar: pd.aadhar || pd.aadhaar || '' , pan: pd.pan || '', uan: pd.uan || '' };
+                pd.contact = pd.contact || { personal_email: pd.personal_email || pd.email || '', personal_mobile: pd.personal_mobile || '' , seating_location: pd.seating_location || '' };
+                pd.payment = pd.payment || { bank_account_no: pd.bank_account_no || '', bank_name: pd.bank_name || '', ifsc_code: pd.ifsc_code || pd.ifsc || '' , account_type: pd.account_type || '', payment_mode: pd.payment_mode || '' };
+            }
+
+            if (!window.profileData) window.profileData = {};
+            ['basic','personal','identity','contact','payment'].forEach(section => {
+                window.profileData[section] = Object.assign({}, window.profileData[section] || {}, pd[section] || {});
+            });
+
+            if (window.profileData.basic && window.profileData.basic.birthday) {
+                window.profileData.basic.birthday = normalizeDateForInput(window.profileData.basic.birthday);
+            }
+
+            try { localStorage.setItem('profileBackup', JSON.stringify(window.profileData)); } catch(_) {}
+            populateAll(window.profileData);
+            showModalContent();
+        } else {
+            // server returned JSON but no profile object -> fallback to merging payload
+            mergePayloadIntoProfileData(payload);
+            populateAll(window.profileData);
+            showModalContent();
+        }
+
+        alert('Saved ' + section);
+    } catch (e) {
+        console.error('saveSection network/error:', e);
+        alert('Network error: ' + (e && e.message ? e.message : e));
+    } finally {
+        document.querySelectorAll('.saveBtn').forEach(b => { b.disabled = false; });
+    }
+}
+
+// Admin load (read-only)
+async function loadEmployeeAsAdmin(empId) {
+    try {
+        showModalSkeletonLoading();
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        openTab('basic');
+        const r = await fetch(`/api/employees/${empId}/profile`, { credentials: 'include', cache: 'no-store' });
+        if (!r.ok) {
+            alert('Could not load employee: ' + r.status);
+            overlay.style.display = 'none';
+            document.body.style.overflow = '';
+            return;
+        }
+        const json = await safeParseResponseText(r);
+        let pd = json && (json.profile || json) || null;
+        if (pd && !pd.basic && (pd.first_name || pd.personal_phone)) {
+            pd = {
+                basic: { first_name: pd.first_name, last_name: pd.last_name, personal_phone: pd.personal_phone, birthday: pd.birthday, present_address: pd.present_address, permanent_address: pd.permanent_address },
+                personal: { gender: pd.gender, marital_status: pd.marital_status, father_name: pd.father_name, linkedin_url: pd.linkedin_url },
+                identity: { uan: pd.uan, pan: pd.pan, aadhar: pd.aadhar },
+                contact: { personal_email: pd.personal_email, personal_mobile: pd.personal_mobile, seating_location: pd.seating_location },
+                payment: { bank_account_no: pd.bank_account_no, bank_name: pd.bank_name, ifsc_code: pd.ifsc_code, account_type: pd.account_type, payment_mode: pd.payment_mode }
+            };
+        }
+        if (pd && pd.basic && pd.basic.birthday) pd.basic.birthday = normalizeDateForInput(pd.basic.birthday);
+        window.profileData = pd;
+        populateAll(window.profileData);
+        adminViewingOther = true;
+        setReadOnly(true);
+        showModalContent();
+    } catch (e) {
+        console.error('Network error fetching employee:', e);
+        alert('Network error fetching employee profile.');
+        overlay.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+window.loadEmployeeAsAdmin = loadEmployeeAsAdmin;
+
+function setReadOnly(readOnly) {
+    document.querySelectorAll('.formTab input, .formTab textarea, .formTab select').forEach(el => {
+        el.disabled = !!readOnly;
+    });
+    document.querySelectorAll('.saveBtn').forEach(btn => {
+        btn.style.display = readOnly ? 'none' : 'inline-block';
+    });
+}
+
+saveBtns.forEach(b => b.addEventListener('click', () => saveSection(b.dataset.section)));
+
+})();
+</script> 
+
+<!-- ====== REPLACED BIRTHDAY WIDGET SCRIPT START ====== -->
+<<script>
+(async function(){
+  const API = '/api/employees/birthdays/today_pandas';
+
+  function escapeHtml(s){
+    return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  try {
+    const res = await fetch(API, { credentials: 'include', cache: 'no-store' });
+    if (!res.ok) {
+      console.warn('Birthday API returned', res.status);
+      return;
+    }
+    const json = await res.json();
+
+    /* ========= Your Birthday Banner ========= */
+    if (json && json.is_your_birthday && json.you) {
+      const headerEl = document.querySelector('header') || document.querySelector('.container') || document.body;
+      const banner = document.createElement('div');
+      banner.style.cssText = "background:#fffaf0;border:1px solid rgba(108,92,231,0.08);padding:12px;border-radius:8px;margin:12px 0;display:flex;align-items:center;gap:12px;";
+      banner.innerHTML = `
+        <div style="font-size:28px">🎉</div>
+        <div>
+          <div style="font-weight:700">Happy Birthday, ${escapeHtml(json.you.name)}!</div>
+          <div style="color:#555;font-size:13px">Wishing you a wonderful day — from everyone at the company.</div>
+        </div>`;
+      if (headerEl && headerEl.parentNode) headerEl.parentNode.insertBefore(banner, headerEl.nextSibling);
+      else document.body.insertBefore(banner, document.body.firstChild);
+    }
+
+    /* ========= Birthday List ========= */
+    if (json && Array.isArray(json.birthdays)) {
+      const listWrap = document.createElement('div');
+      listWrap.style.cssText = 'margin:12px 0;padding:12px;background:#fff;border:1px solid #efefef;border-radius:8px;';
+
+      const heading = document.createElement('div');
+      heading.innerHTML = `<strong>Today's birthdays — ${escapeHtml(json.date || '')}</strong>`;
+      listWrap.appendChild(heading);
+
+      const itemsContainer = document.createElement('div');
+      itemsContainer.style.marginTop = '8px';
+
+      if (json.birthdays.length === 0) {
+        const no = document.createElement('div');
+        no.style.color = '#666';
+        no.textContent = 'No birthdays today';
+        itemsContainer.appendChild(no);
+      } else {
+        json.birthdays.forEach(b => {
+
+          const item = document.createElement('div');
+          item.style.display = 'flex';
+          item.style.alignItems = 'center';
+          item.style.justifyContent = 'space-between';
+          item.style.padding = '10px 0';
+          item.style.borderTop = '1px solid #fafafa';
+
+          /* --- Left side: Avatar + Name --- */
+          const left = document.createElement('div');
+          left.style.display = 'flex';
+          left.style.alignItems = 'center';
+          left.style.gap = '12px';
+
+          const avatar = document.createElement('div');
+          avatar.style.width = '44px';
+          avatar.style.height = '44px';
+          avatar.style.borderRadius = '50%';
+          avatar.style.background = '#f2f2ff';
+          avatar.style.display = 'inline-flex';
+          avatar.style.alignItems = 'center';
+          avatar.style.justifyContent = 'center';
+          avatar.style.fontWeight = '700';
+          avatar.textContent = (b.name || '?').slice(0,1).toUpperCase();
+
+          const nameDiv = document.createElement('div');
+          nameDiv.style.fontWeight = '600';
+          nameDiv.textContent = b.name || '';
+
+          left.appendChild(avatar);
+          left.appendChild(nameDiv);
+
+          /* --- Right Side: WISH BUTTON (OPEN birth_email.html) --- */
+          const right = document.createElement('div');
+
+          if (b && b.email) {
+            const wishBtn = document.createElement('button');
+            wishBtn.type = 'button';
+            wishBtn.textContent = '🎉 Wish';
+            wishBtn.style.background = 'transparent';
+            wishBtn.style.border = 'none';
+            wishBtn.style.color = '#6c5ce7';
+            wishBtn.style.cursor = 'pointer';
+            wishBtn.style.fontWeight = '600';
+            wishBtn.style.fontSize = '15px';
+            wishBtn.style.textDecoration = 'none';
+
+            wishBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              
+              const qs = new URLSearchParams({
+                id: b.id || '',
+                name: b.name || '',
+                email: b.email || ''
+              }).toString();
+
+              window.open('birth_email.html?' + qs, '_blank', 'noopener,noreferrer');
+            });
+
+            right.appendChild(wishBtn);
+          } 
+          else {
+            /* No email = show profile fallback */
+            const a = document.createElement('a');
+            a.href = '/employees/admin/' + (b.id || '');
+            a.style.color = '#6c5ce7';
+            a.style.fontWeight = '600';
+            a.style.textDecoration = 'none';
+            a.textContent = 'Profile';
+            right.appendChild(a);
+          }
+
+          item.appendChild(left);
+          item.appendChild(right);
+          itemsContainer.appendChild(item);
+        });
+      }
+
+      listWrap.appendChild(itemsContainer);
+      const container = document.querySelector('.container') || document.body;
+      container.insertBefore(listWrap, container.firstChild);
+    }
+
+  } catch (err) {
+    console.error("Birthday widget error", err);
+  }
+})();
+</script>
+
+
+
+<script>
+function calculateProfileCompletion(profile) {
+    if (!profile) return 0;
+
+    const sections = ['basic', 'personal', 'identity', 'contact', 'payment'];
+    let completed = 0;
+
+    sections.forEach(section => {
+        const data = profile[section];
+        if (!data) return;
+
+        // check if ANY field in section has value
+        const hasValue = Object.values(data).some(v =>
+            v !== null && v !== undefined && String(v).trim() !== ''
+        );
+
+        if (hasValue) completed += 1;
+    });
+
+    return Math.round((completed / sections.length) * 100);
+}
+
+function updateDashboardProgress(profile) {
+    const percent = calculateProfileCompletion(profile);
+
+    const percentText = document.getElementById('dashPercent');
+    const bar = document.getElementById('dashBar');
+
+    if (percentText) percentText.innerText = percent + '%';
+    if (bar) {
+        bar.style.width = percent + '%';
+        bar.innerText = percent + '%';
+    }
+}
+</script>
+
 
 </body>
 </html>

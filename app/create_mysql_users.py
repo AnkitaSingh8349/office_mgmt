@@ -9,7 +9,7 @@ def create_users():
 
     cur = conn.cursor()
     users = [
-        ('Alice Admin', 'admin@example.com', '1111111111', 'admin', None, None, '2020-01-01', 'Active', generate_password_hash('adminpass')),
+        ('Alice Admin', 'ankita@ajxtechnologies.com', '1111111111', 'admin', None, None, '2020-01-01', 'Active', generate_password_hash('adminpass')),
         ('Hannah HR', 'hr@example.com', '2222222222', 'hr', None, None, '2021-06-01', 'Active', generate_password_hash('hrpass')),
         ('Ethan Employee', 'emp@example.com', '3333333333', 'employee', None, None, '2022-03-15', 'Active', generate_password_hash('emppass')),
     ]

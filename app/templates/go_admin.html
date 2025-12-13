@@ -101,6 +101,42 @@
             font-weight: 600;
         }
 
+        /* Birthday card */
+        .birthday-card {
+            background: linear-gradient(90deg,#fffaf0,#fff);
+            border: 1px solid rgba(220,180,60,0.12);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 18px;
+            display:flex;
+            align-items:center;
+            gap:12px;
+        }
+        .birthday-list {
+            margin-top:12px;
+            background: #fff;
+            border:1px solid #efefef;
+            border-radius:8px;
+            padding:12px;
+        }
+        .birthday-row {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding:8px 6px;
+            border-bottom:1px solid #fafafa;
+        }
+        .birthday-row:last-child { border-bottom: none; }
+        .send-wish-btn {
+            padding:6px 10px;
+            border-radius:6px;
+            border:1px solid #6c5ce7;
+            background:#6c5ce7;
+            color:#fff;
+            cursor:pointer;
+        }
+        .send-wish-btn[disabled] { opacity:0.6; cursor:not-allowed; }
+
         /* Summary Cards */
         .summary-grid {
             display: grid;
@@ -198,6 +234,7 @@
             .link-card { font-size: 17px; }
             .list-grid { grid-template-columns: 1fr; }
             .modal { width: 96%; padding:14px; }
+            .birthday-card { flex-direction:column; align-items:flex-start; }
         }
     </style>
 
@@ -209,6 +246,14 @@
     <div>
         <h2>Welcome {{ current_user.name if current_user and current_user.name else 'Admin' }} 👑</h2>
         <p>You are logged in as {{ (current_user.role|capitalize) if current_user and current_user.role else 'Admin' }}.</p>
+        <!-- This existing button is hooked by the script below -->
+      {% block header_employee_profile %}
+  <button id="adminBtn" class="btn btn-outline-secondary">
+      Employees profile
+  </button>
+{% endblock %}
+
+
     </div>
    <div>
     <form action="/auth/logout" method="post" style="display:inline;">
@@ -237,6 +282,12 @@
             👥 <span style="margin-left:8px">Who's Checked In</span>
         </div>
     </div>
+
+    <!-- === ADDED BIRTHDAY WIDGET (no other code changed) === -->
+    <div id="birthdayContainer">
+      <!-- will be filled by JS if there are birthdays -->
+    </div>
+    <!-- === end birthday widget insertion === -->
 
     <!-- Summary Cards -->
     <h4 class="section-title">Summary</h4>
@@ -337,7 +388,7 @@ function fmtDateFriendly(isoDate){
     return d.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric', year:'numeric' });
 }
 
-async function fetchJson(url, opts = {}){
+async function fetchJson(url, opts = {}) {
     const r = await fetch(url, { credentials: "same-origin", headers: { "Accept": "application/json" }, ...opts });
     const text = await r.text();
     let json = null;
@@ -536,6 +587,139 @@ async function loadPresence(){
     } catch(e){ q('summaryEmployees').innerText = '—'; }
 })();
 </script>
+
+<!-- ================== BIRTHDAY WIDGET SCRIPT ================== -->
+<script>
+(function(){
+  const container = document.getElementById('birthdayContainer');
+
+  if (!container) return;
+
+  function escapeHtml(s){
+    return String(s||'').replace(/[&<>"']/g, c =>
+      ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])
+    );
+  }
+
+  async function init() {
+    try {
+      const res = await fetch('/api/employees/birthdays/today_pandas', {
+        credentials: 'same-origin',
+        cache: 'no-store'
+      });
+      if (!res.ok) return;
+
+      const json = await res.json();
+      if (!json) return;
+
+      const date = json.date || (new Date()).toISOString().slice(0,10);
+      const birthdays = Array.isArray(json.birthdays) ? json.birthdays : [];
+
+      if (birthdays.length === 0) return;
+
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `
+        <div class="birthday-card" role="region" aria-label="Today's birthdays">
+          <div style="font-size:22px">🎂</div>
+          <div>
+            <div style="font-weight:700">Today's birthdays — ${escapeHtml(date)}</div>
+            <div style="color:#666;font-size:13px">See who is celebrating today.</div>
+          </div>
+          <div style="margin-left:auto">
+            <button id="birthdayOpenList"
+              class="send-wish-btn"
+              style="background:#fff;color:#6c5ce7;border:1px solid #6c5ce7">
+              View list
+            </button>
+          </div>
+        </div>
+        <div class="birthday-list" id="birthdayList" style="display:none;"></div>
+      `;
+      container.appendChild(wrap);
+
+      const listDiv = container.querySelector('#birthdayList');
+
+      function renderRows() {
+        listDiv.innerHTML = '';
+        birthdays.forEach(b => {
+          const id = b.id ?? b.employee_id ?? b.emp_id;
+          const name = b.name ?? b.full_name ?? 'Unknown';
+
+          const row = document.createElement('div');
+          row.className = 'birthday-row';
+          row.innerHTML = `
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:50%;
+                          background:#f2f2ff;display:flex;
+                          align-items:center;justify-content:center;
+                          font-weight:600">
+                ${escapeHtml((name||'?').slice(0,1).toUpperCase())}
+              </div>
+              <div>
+                <div style="font-weight:600">${escapeHtml(name)}</div>
+              </div>
+            </div>
+            <div>
+              <button class="send-wish-btn" data-emp-id="${escapeHtml(String(id))}">
+                Send wishes
+              </button>
+            </div>
+          `;
+          listDiv.appendChild(row);
+        });
+      }
+
+      // toggle list visibility
+      const openBtn = container.querySelector('#birthdayOpenList');
+      openBtn.addEventListener('click', () => {
+        listDiv.style.display = listDiv.style.display === 'none' ? 'block' : 'none';
+      });
+
+      renderRows();
+
+      /* 🔥 ONLY CHANGE: OPEN birth_email.html */
+      listDiv.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('.send-wish-btn');
+        if (!btn) return;
+
+        const empId = btn.getAttribute('data-emp-id');
+        if (!empId) return;
+
+        window.location.href =
+          '/birth_email.html?employee_id=' + encodeURIComponent(empId);
+      });
+
+    } catch (e) {
+      console.error('Birthday widget init error', e);
+    }
+  }
+
+  init();
+})();
+</script>
+
+<!-- EMPLOYEE LIST / MODAL LOGIC REMOVED -->
+<!--
+  The large employee list and modal scripts have been removed from this file.
+  Keep employee management code in a separate page or separate JS module,
+  e.g. /admin/employees/profile and static/js/admin_employee_profile.js
+-->
+
+<!-- Small redirect handler for the adminBtn (opens separate employees page) -->
+<script>
+(function(){
+  const btn = document.getElementById('adminBtn');
+  if (btn) {
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      // open the separate employee profile page (implement that route/template separately)
+      window.location.href = '/admin/employees/profile';
+    });
+  }
+})();
+</script>
+
+
 
 </body>
 </html>

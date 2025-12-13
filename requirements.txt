@@ -14,3 +14,4 @@ typing_extensions==4.15.0
 uvicorn==0.38.0
 itsdangerous==2.1.2
 SQLAlchemy==2.0.20
+pip freeze | grep -E 'pandas|numpy' >> requirements.txt

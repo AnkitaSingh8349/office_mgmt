@@ -1,99 +1,35 @@
 {% extends "go_admin.html" %}
+
+{% block header_employee_profile %}
+  {# intentionally empty – hide button on employee salary page #}
+{% endblock %}
+
 {% block content %}
 
-{# Small inline styles to match the admin look — feel free to move to your CSS file #}
-<style>
-  body.salary-page {
-    background: #f4f6f9; /* soft gray background */
-  }
-  .page-title {
-    font-size: 1.6rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-  }
-  .stat-card {
-    background: #fff;
-    border-radius: 10px;
-    padding: 18px;
-    box-shadow: 0 4px 14px rgba(18, 38, 63, 0.04);
-  }
-  .table-card {
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  .table thead th {
-    background: #23272b; /* dark header like screenshot */
-    color: #fff;
-    border: 0;
-  }
-  .table tbody tr:nth-child(odd) { background: #fbfbfb; }
-  .table tbody td { vertical-align: middle; }
-  .download-btn {
-    min-width: 110px;
-  }
-</style>
 
-<div class="container-fluid salary-page py-4">
+<div class="container py-5">
 
-  <!-- PAGE HEADER -->
-  <div class="mb-4">
-    <div class="d-flex align-items-center justify-content-between">
-      <div>
-        <h1 class="page-title mb-1">💰 Salary / Reports</h1>
-        <div class="small text-muted">Welcome {{ user.name or user.get('name', 'Employee') }} — you are logged in as <strong class="text-capitalize">{{ (user.role or user.get('role', 'employee')) }}</strong></div>
+  <!-- USER SUMMARY -->
+  <div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+      <h2 class="h4 mb-1">Welcome {{ user.name or user.get('name', 'Employee') }} 👋</h2>
+      <div class="text-muted small">
+        Email: <strong>{{ user.email or user.get('email', '-') }}</strong>
       </div>
+    </div>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+      <span class="badge bg-success px-3 py-2 text-uppercase">Role: {{ (user.role or user.get('role', 'employee')) }}</span>
     </div>
   </div>
 
-  <!-- STATS ROW (small cards like admin) -->
-  <div class="row g-3 mb-4">
-    <div class="col-12 col-md-6 col-lg-4">
-      <div class="stat-card d-flex justify-content-between align-items-center">
-        <div>
-          <div class="text-muted small">Attendance</div>
-          <div class="h4 mb-0">—</div>
-          <div class="small text-muted">Total present (all employees)</div>
-        </div>
-        <div class="display-5 text-primary">—</div>
-      </div>
-    </div>
+  <!-- CARD -->
+  <div class="card shadow-sm rounded-3">
+    <div class="card-body">
 
-    <div class="col-12 col-md-6 col-lg-4">
-      <div class="stat-card d-flex justify-content-between align-items-center">
+      <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-          <div class="text-muted small">Absent</div>
-          <div class="h4 mb-0">—</div>
-          <div class="small text-muted">Leaves recorded this month</div>
-        </div>
-        <div class="display-5 text-danger">—</div>
-      </div>
-    </div>
-
-    <div class="col-12 col-md-6 col-lg-4">
-      <div class="stat-card d-flex justify-content-between align-items-center">
-        <div>
-          <div class="text-muted small">Employees</div>
-          <div class="h4 mb-0">{{ total_employees or '—' }}</div>
-          <div class="small text-muted">Total employees</div>
-        </div>
-        <div class="display-5 text-success">—</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MAIN TABLE CARD -->
-  <div class="card table-card shadow-sm">
-    <div class="card-body p-0">
-      <div class="p-4 border-bottom">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h5 class="mb-0">My Salary Slips</h5>
-            <small class="text-muted">Only your salaries are shown (admins see all)</small>
-          </div>
-          <div class="text-end">
-            <div class="small text-muted">Email: <strong>{{ user.email or user.get('email', '-') }}</strong></div>
-            <div class="small text-muted">Name: <strong>{{ user.name or user.get('name', '-') }}</strong></div>
-          </div>
+          <h5 class="mb-0">My Salary Slips</h5>
+          <small class="text-muted">Only salaries for your account are shown below</small>
         </div>
       </div>
 
@@ -116,22 +52,22 @@
       {% endif %}
 
       <div class="table-responsive">
-        <table class="table table-hover table-bordered mb-0 align-middle">
-          <thead>
+        <table class="table table-hover table-striped table-bordered align-middle mb-0">
+          <thead class="table-dark">
             <tr class="text-center">
-              <th style="width:80px">S. No</th>
-              <th style="min-width:160px">Month</th>
-              <th style="min-width:160px">Base Salary</th>
+              <th style="width:70px">S. No</th>
+              <th style="min-width:140px">Month</th>
+              <th style="min-width:150px">Base Salary</th>
               <th style="min-width:140px">Deductions</th>
               <th style="min-width:140px">Net Salary</th>
-              <th style="min-width:160px">Payslip</th>
+              <th style="min-width:170px">Payslip</th>
             </tr>
           </thead>
 
           <tbody>
             {% if not salaries %}
               <tr>
-                <td colspan="6" class="text-center py-5 text-muted">No salary records available.</td>
+                <td colspan="6" class="text-center py-4 text-muted">No salary records available.</td>
               </tr>
             {% else %}
               {% set shown = 0 %}
@@ -139,25 +75,31 @@
                 {% if is_admin or (viewer_id is not none and s.employee_id == viewer_id) %}
                   {% set shown = shown + 1 %}
                   <tr class="text-center">
-                    <td class="fw-semibold">{{ loop.index }}</td>
+                    <td class="align-middle">{{ loop.index }}</td>
 
-                    <td>
-                      <div class="fw-medium">{{ s.month or '-' }}</div>
+                    <td class="align-middle">
+                      <span class="badge bg-primary">{{ s.month or '-' }}</span>
                     </td>
 
-                    <td>₹ {{ "%.2f"|format(s.base_salary or 0) }}</td>
-                    <td class="text-danger">₹ {{ "%.2f"|format(s.deductions or 0) }}</td>
-                    <td class="fw-bold text-success">₹ {{ "%.2f"|format(s.net_salary or 0) }}</td>
+                    <td class="align-middle">₹ {{ "%.2f"|format(s.base_salary or 0) }}</td>
+                    <td class="align-middle text-danger">₹ {{ "%.2f"|format(s.deductions or 0) }}</td>
+                    <td class="align-middle fw-bold text-success">₹ {{ "%.2f"|format(s.net_salary or 0) }}</td>
 
-                    <td>
+                    <td class="align-middle">
                       {% if s.slip_file or s.slip_filename or s.file_name %}
                         <a
                           href="{{ request.url_for('download_salary', salary_id=s.id) }}"
-                          class="btn btn-success btn-sm download-btn d-inline-flex align-items-center"
+                          class="btn btn-success btn-sm d-inline-flex align-items-center"
+                          role="button"
                           title="Open payslip for {{ s.month or '' }}"
                           target="_blank" rel="noopener noreferrer"
                         >
-                          <i class="bi bi-cloud-download-fill me-2" aria-hidden="true"></i> Download
+                          <!-- simple icon + text -->
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download me-2" viewBox="0 0 16 16" aria-hidden="true">
+                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.6A1 1 0 0 0 2.5 14h11a1 1 0 0 0 1-1v-2.6a.5.5 0 0 1 1 0v2.6A2 2 0 0 1 13.5 15h-11A2 2 0 0 1 .5 13.5v-2.6a.5.5 0 0 1 .5-.5z"/>
+                            <path d="M7.646 1.146a.5.5 0 0 1 .708 0L11 3.793V8.5a.5.5 0 0 1-1 0V4.707L8 2.707 5 4.707V8.5a.5.5 0 0 1-1 0V3.793l2.646-2.647z"/>
+                          </svg>
+                          Download
                         </a>
                       {% else %}
                         <button class="btn btn-outline-secondary btn-sm" disabled>Not available</button>
@@ -169,7 +111,7 @@
 
               {% if shown == 0 %}
                 <tr>
-                  <td colspan="6" class="text-center py-4 text-muted">No salary records found for your account.</td>
+                  <td colspan="6" class="text-center py-3 text-muted">No salary records found for your account.</td>
                 </tr>
               {% endif %}
             {% endif %}
@@ -179,7 +121,6 @@
 
     </div>
   </div>
-
 </div>
 
 {% endblock %}

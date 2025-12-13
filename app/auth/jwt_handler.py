@@ -1,46 +1,34 @@
 # app/auth/jwt_handler.py
-import jwt
-from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+# Uses python-jose to create/verify JWTs (compatible with dependencies.py)
 import os
+from datetime import datetime, timedelta
+from typing import Dict, Any, Optional
 
+from jose import jwt, JWTError
 
-# IMPORTANT: change this secret in production and don't hardcode in code
-SECRET_KEY = os.environ.get("JWT_SECRET", "devsecret123")
-
+# Read secret from env (keep in sync with SessionMiddleware secret for dev/migration)
+JWT_SECRET = os.getenv("JWT_SECRET", os.getenv("SESSION_SECRET", "devsecret123"))
 ALGORITHM = "HS256"
 
 def create_access_token(payload: Dict[str, Any], expires_minutes: int = 120) -> str:
     """
     Create a JWT token with an 'exp' claim.
-    payload should be a dict (e.g. {"sub": user_id, "role": "admin"})
+    payload: a dict, e.g. {"sub": "4", "user_id": 4, "role": "employee"}
+    Returns a JWT string.
     """
     to_encode = payload.copy()
     expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
     to_encode.update({"exp": expire})
-    token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    # PyJWT returns str in v2+, bytes in older versions — ensure str
-    if isinstance(token, bytes):
-        token = token.decode("utf-8")
+    token = jwt.encode(to_encode, JWT_SECRET, algorithm=ALGORITHM)
+    # python-jose returns str
     return token
-
-# backward-compatible alias
-create_token = create_access_token
-
 
 def decode_jwt(token: str) -> Optional[Dict[str, Any]]:
     """
-    Decode and verify a JWT token. Returns the payload dict on success, otherwise None.
+    Decode and verify a JWT token. Returns payload dict on success, otherwise None.
     """
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
         return payload
-    except jwt.ExpiredSignatureError:
-        # token expired
+    except JWTError:
         return None
-    except jwt.InvalidTokenError:
-        # invalid token
-        return None
-
-# backward-compatible alias
-verify_token = decode_jwt

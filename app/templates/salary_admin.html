@@ -67,9 +67,10 @@
               {% set emp = row.employee %}
               <tr class="text-center">
 
-                <td>{{ emp.id if emp else s.employee_id }}</td>
+               <td>{{ emp.id if emp else s.employee_id }}</td>
 
-                <td class="text-start">{{ emp.name if emp else ('#' ~ s.employee_id) }}</td>
+
+                <td>{{ emp.name if emp else ('#' ~ s.employee_id) }}</td>
 
                 <td>{{ s.month or '-' }}</td>
 
@@ -78,22 +79,21 @@
                 <!-- CLICKABLE ABSENT DETAILS -->
                 <td>
                   <button class="btn btn-sm btn-outline-danger" 
-                          onclick="showAbsentDetails('{{ emp.name if emp else ('#' ~ s.employee_id) }}', '{{ s.employee_id }}', '{{ s.month or '' }}')">
+                          onclick="showAbsentDetails('{{ emp.name }}', '{{ s.employee_id }}', '{{ s.month }}')">
                     {{ row.absent_count }}
                   </button>
                 </td>
 
-                <td>₹ {{ "%.2f"|format(s.base_salary or s.base or 0) }}</td>
+                <td>₹ {{ "%.2f"|format(s.base_salary or 0) }}</td>
                 <td>₹ {{ "%.2f"|format(s.deductions or 0) }}</td>
-                <td class="fw-bold text-success">₹ {{ "%.2f"|format(s.net_salary or s.net or 0) }}</td>
+                <td class="fw-bold text-success">₹ {{ "%.2f"|format(s.net_salary or 0) }}</td>
 
-                <!-- FIXED DOWNLOAD URL (uses router name "download_salary") -->
+                <!-- ✅ ONLY CHANGE: FIX DOWNLOAD URL -->
                 <td>
-                  {% if s.slip_file or s.slip_filename or s.file_name %}
-                    <a href="{{ url_for('download_salary', salary_id=s.id) }}"
-                       class="btn btn-sm btn-outline-primary">
+                  {% if s.slip_file %}
+                   <a href="{{ url_for('download_salary', salary_id=s.id) }}"
+   class="btn btn-sm btn-outline-primary">
                       Download
-                    </a>
                   {% else %}
                     <span class="text-muted">No slip</span>
                   {% endif %}
@@ -188,4 +188,5 @@
       new bootstrap.Modal(document.getElementById("absentModal")).show();
     }
   </script>
+
 {% endblock %}
