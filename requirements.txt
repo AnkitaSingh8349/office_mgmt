@@ -13,7 +13,7 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 uvicorn==0.38.0
 itsdangerous==2.1.2
-SQLAlchemy==2.0.20
+SQLAlchemy==2.0.36
 # --- NEWLY ADDED FOR RENDER & FUNCTIONALITY ---
 python-dotenv==1.0.1
 werkzeug==3.0.1
