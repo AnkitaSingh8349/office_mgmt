@@ -31,6 +31,20 @@ from fastapi.templating import Jinja2Templates
 app = FastAPI(title="Office Management System")
 
 # ---------------------------------------------------------------------
+# DB SETUP: Create tables if they don't exist
+# ---------------------------------------------------------------------
+from .database import engine, Base
+# Import ALL models so Base knows about them before create_all()
+from .employees import models as emp_models
+from .auth import models as auth_models  # (if you have auth models separately)
+from .leaves import models as leave_models
+from .attendance import models as att_models
+from .salary import models as salary_models
+from .tasks import models as task_models
+
+Base.metadata.create_all(bind=engine)
+
+# ---------------------------------------------------------------------
 # Import routers AFTER app creation (avoids early eval / circular import)
 # ---------------------------------------------------------------------
 # Auth
