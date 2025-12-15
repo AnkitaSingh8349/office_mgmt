@@ -36,7 +36,7 @@ app = FastAPI(title="Office Management System")
 from .database import engine, Base
 # Import ALL models so Base knows about them before create_all()
 from .employees import models as emp_models
-from .auth import models as auth_models  # (if you have auth models separately)
+# from .auth import models as auth_models  <-- REMOVED (File does not exist)
 from .leaves import models as leave_models
 from .attendance import models as att_models
 from .salary import models as salary_models
