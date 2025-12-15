@@ -1,27 +1,42 @@
-app\employees.db
-media\
-app\media\
-app\static\uploads\
-venv\
-__pycache__\
-
-# Environment variables
-.env
-
+# ========================
 # Python cache
+# ========================
 __pycache__/
 *.pyc
+*.pyo
 
+# ========================
+# Virtual environment
+# ========================
+venv/
+
+# ========================
+# Environment variables
+# ========================
+.env
+
+# ========================
 # Databases
+# ========================
 *.db
 
-# Uploaded files
+# ========================
+# Uploads / media
+# ========================
+media/
+app/media/
 app/static/uploads/
 
+# ========================
 # Local data
+# ========================
 data/
 
-# Misc
-uvicorn
+# ========================
+# OS files
+# ========================
+Thumbs.db
+.DS_Store
 cd
+uvicorn
 

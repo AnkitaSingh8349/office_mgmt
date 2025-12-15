@@ -142,21 +142,7 @@ def debug_routes():
             })
     return {"routes": routes}
 
-@app.get("/")
-def home():
-    return {
-        "message": "Office Management System running!",
-        "endpoints": {
-            "login": "/login",
-            "signup": "/signup",
-            "dashboard": "/dashboard",
-            "attendance": "/attendance/",
-            "employees": "/employees/",
-            "leaves": "/leaves",
-            "salary": "/salary/",
-            "tasks": "/tasks/"
-        }
-    }
+
 
 # ------------------- INCLUDE YOUR ROUTERS (fixed) -------------------
 
@@ -267,4 +253,11 @@ def birth_email_page(request: Request, id: int | None = None, name: str = "", em
             "name": name,
             "email": email
         }
+    )
+# ✅ FRONT PAGE ONLY
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request}
     )
